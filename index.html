@@ -546,17 +546,6 @@
             <span class="num-val" id="slottime-val">10</span>
           </div>
         </div>
-        <div class="form-group">
-          <div class="form-label">
-            <span>TX Tail (post-keyup hold)</span>
-            <strong id="lbl-txtail">—</strong>
-          </div>
-          <div class="num-row">
-            <input type="range" min="0" max="255" value="5" id="txtail"
-              oninput="updateRange('txtail','lbl-txtail',v=>`${v} × 10ms = ${v*10}ms`); markUnsaved()">
-            <span class="num-val" id="txtail-val">5</span>
-          </div>
-        </div>
       </div>
       <div class="card">
         <h3>Duplex</h3>
@@ -720,16 +709,6 @@
             <span>Max: <strong id="max-rx-twist" style="color:var(--text)">—</strong></span>
           </div>
         </div>
-      </div>
-
-      <div class="card">
-        <h3>Auto-Adjust</h3>
-        <p style="font-size:0.76rem;color:var(--text-muted);margin-bottom:10px;">
-          Triggers a one-shot automatic input level calibration. Not a persistent setting.
-        </p>
-        <button class="btn btn-secondary btn-icon" id="btn-auto-adjust" onclick="autoAdjustLevels()">
-          🎯 Auto-Adjust Input Levels
-        </button>
       </div>
 
       <div class="action-bar">
@@ -1080,10 +1059,6 @@
 
   function revertSettings() { refreshInfo(); unsaved = false; }
 
-  function autoAdjustLevels() {
-    tx(0x06, 0x2B); // ADJUST_INPUT_LEVELS
-  }
-
   /* ─── Receive Audio ─── */
   function toggleRxStream() {
     rxStreaming = document.getElementById('rx-streaming').checked;
@@ -1198,7 +1173,6 @@
     updateRange('txdelay','lbl-txdelay',v=>`${v} × 10ms = ${v*10}ms`);
     updateRange('persist','lbl-persist',v=>`${v} / 256 = ${(v/256).toFixed(2)}`);
     updateRange('slottime','lbl-slot',v=>`${v} × 10ms = ${v*10}ms`);
-    updateRange('txtail','lbl-txtail',v=>`${v} × 10ms = ${v*10}ms`);
     document.getElementById('lbl-igain').textContent = '50';
     document.getElementById('lbl-itwist').textContent = '8 dB';
     document.getElementById('lbl-ogain').textContent = '128';

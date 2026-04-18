@@ -60,7 +60,7 @@ All commands sent as KISS frames with cmd=0x06 (SetHardware) and device-specific
 | 0x18 | SET_INPUT_TWIST | 1 byte | RX twist setting |
 | 0x1A | SET_OUTPUT_TWIST | 1 byte | TX twist setting |
 | 0x2A | SAVE_EEPROM | 0 | Persist settings to EEPROM |
-| 0x2B | ADJUST_INPUT_LEVELS | 0 | Trigger audio level adjustment |
+
 | 0x31 | GET_DATETIME | 0 | Get TNC date/time (BCD) |
 | 0x32 | SET_DATETIME | 8 bytes BCD | Set TNC date/time |
 | 0x45 | SET_BT_CONN_TRACK | 1 byte | Bluetooth connection tracking |
@@ -86,7 +86,6 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 | 0x01 | TX_DELAY | 0–255 | Pre-keyup delay in 10ms units |
 | 0x02 | PERSISTENCE | 0–255 | CSMA persistence (p = value/256) |
 | 0x03 | SLOT_TIME | 0–255 | Slot interval in 10ms units |
-| 0x04 | TX_TAIL | 0–255 | Post-keyup hold time in 10ms units |
 | 0x05 | FULL_DUPLEX | 0/1 | Full duplex mode |
 
 ## 4. Feature Requirements
@@ -115,7 +114,6 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 - TX Delay: slider/input (0–255, step 1)
 - Persistence: slider/input (0–255, step 1)
 - Slot Time: slider/input (0–255, step 1)
-- TX Tail: slider/input (0–255, step 1)
 - Full Duplex: toggle switch
 
 ### 4.4 Modem Configuration
@@ -136,7 +134,6 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 
 Controls for receive audio:
 - Start/Stop receive audio stream toggle
-- Auto-adjust input levels: one-shot activity (triggered once, not a persistent setting) via ADJUST_INPUT_LEVELS command
 
 ### 4.6 Transmit Audio
 
@@ -207,7 +204,7 @@ The UI sections map 1:1 to the Android BLE Config app screens:
 │                                         │
 │  ┌─ KISS Parameters ─────────────────┐  │
 │  │ TX Delay | Persistence | SlotTime  │  │
-│  │ TX Tail | Full Duplex             │  │
+│  │ Full Duplex                        │  │
 │  └───────────────────────────────────┘  │
 │                                         │
 │  ┌─ Modem Configuration ─────────────┐  │
@@ -217,7 +214,6 @@ The UI sections map 1:1 to the Android BLE Config app screens:
 │  ┌─ Receive Audio ───────────────────┐  │
 │  │ Input Gain | Input Twist | Squelch │  │
 │  │ [Start/Stop] Live Level Bar       │  │
-│  │ [Auto-Adjust] (one-shot, not opt)  │  │
 │  └───────────────────────────────────┘  │
 │                                         │
 │  ┌─ Transmit Audio ──────────────────┐  │
@@ -255,4 +251,5 @@ The UI sections map 1:1 to the Android BLE Config app screens:
 - [BLE-KISS-API Specification](https://github.com/hessu/aprs-specs/blob/master/BLE-KISS-API.md)
 - [KISS Protocol (Wikipedia)](https://en.wikipedia.org/wiki/KISS_(amateur_radio_protocol))
 - [Web Bluetooth API (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API)
-- [Mobilinkd BLEConfig Android App](https://github.com/mobilinkd/BLEConfig)
+- [Mobilinkd BLEConfig Android App](https://github.com/mobilinkd/BLEConfig) (Android BLE, Kotlin)
+- [mobilinkd/iosTncConfig](https://github.com/mobilinkd/iosTncConfig) (iOS BLE, Swift) — primary reference for UI fidelity
