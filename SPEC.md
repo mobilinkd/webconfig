@@ -70,7 +70,15 @@ All commands sent as KISS frames with cmd=0x06 (SetHardware) and device-specific
 | 0x51 | SET_PASSALL | 1 byte | Pass all frames mode |
 | 0x53 | SET_RX_POLARITY | 1 byte | RX polarity invert |
 | 0x55 | SET_TX_POLARITY | 1 byte | TX polarity invert |
+| 0x7E | GET_CAPABILITIES | 0 | Returns `UInt16` bitmap of hardware capabilities |
 | 0x7F | GET_ALL_VALUES | 0 | Retrieve all config values |
+
+Capabilities bitmap flags:
+| Bit | Name | Description |
+|-----|------|-------------|
+| 0x0002 | CAP_EEPROM_SAVE | Device supports saving settings to EEPROM |
+| 0x0004 | CAP_ADJUST_INPUT | Device supports auto-adjust input levels (not exposed in web UI) |
+| 0x0008 | CAP_DFU_FIRMWARE | Device supports DFU firmware update |
 
 Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 | Subcmd | Name | Args | Description |
@@ -245,6 +253,8 @@ Everything the hardware supports must be documented and implemented in the BLE p
 - The app can receive and handle any valid hardware response
 - Future features can be added without protocol changes
 - The log view can distinguish valid from invalid data
+
+**`GET_CAPABILITIES` (0x7E)** returns a `UInt16` bitmap. Use it to gate UI features that not all hardware revisions support (e.g. future modem types). The web app always sends `GET_ALL_VALUES` on connect to populate the UI; `GET_CAPABILITIES` supplements it for features that cannot be inferred from the all-values response.
 
 ### 7.2 UI/UX Requirements
 
