@@ -685,17 +685,6 @@
           </div>
         </div>
         <div class="form-group">
-          <div class="form-label">
-            <span>Squelch Level</span>
-            <strong id="lbl-squelch">—</strong>
-          </div>
-          <div class="num-row">
-            <input type="range" min="0" max="255" value="0" id="squelch"
-              oninput="document.getElementById('lbl-squelch').textContent=this.value; markUnsaved()">
-            <span class="num-val" id="squelch-val">0</span>
-          </div>
-        </div>
-        <div class="form-group">
           <div class="form-label"><span>Live RX Level</span></div>
           <div class="battery-bar-bg" style="margin-top:8px;">
             <div class="battery-bar-fill" id="rx-level-bar" style="width:0%; background: var(--ok);"></div>
@@ -1177,7 +1166,6 @@
     document.getElementById('lbl-itwist').textContent = '8 dB';
     document.getElementById('lbl-ogain').textContent = '128';
     document.getElementById('lbl-otwist').textContent = '10 dB';
-    document.getElementById('lbl-squelch').textContent = '0';
     document.getElementById('min-rx-twist').textContent = '0 dB';
     document.getElementById('max-rx-twist').textContent = '15 dB';
     document.getElementById('min-tx-twist').textContent = '0 dB';

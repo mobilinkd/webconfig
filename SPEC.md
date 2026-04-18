@@ -48,7 +48,6 @@ All commands sent as KISS frames with cmd=0x06 (SetHardware) and device-specific
 |--------|------|------|-------------|
 | 0x01 | SET_OUTPUT_GAIN | 2 bytes (16-bit signed) | TX output gain |
 | 0x02 | SET_INPUT_GAIN | 2 bytes (16-bit signed) | RX input gain |
-| 0x03 | SET_SQUELCH_LEVEL | 1 byte | Squelch threshold |
 | 0x05 | STREAM_VOLUME | 0 | Start audio level streaming |
 | 0x06 | GET_BATTERY_LEVEL | 0 | Returns battery voltage (mV) |
 | 0x07 | PTT_MARK | 0 | PTT on MARK frequency |
@@ -130,7 +129,6 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 - RX Input Gain: slider with range from device capabilities
 - RX Input Twist: slider with range from device capabilities
 - Live RX Level: real-time audio level bar (color-coded)
-- Squelch Level: slider
 
 Controls for receive audio:
 - Start/Stop receive audio stream toggle
@@ -212,7 +210,7 @@ The UI sections map 1:1 to the Android BLE Config app screens:
 │  └───────────────────────────────────┘  │
 │                                         │
 │  ┌─ Receive Audio ───────────────────┐  │
-│  │ Input Gain | Input Twist | Squelch │  │
+│  │ Input Gain | Input Twist             │  │
 │  │ [Start/Stop] Live Level Bar       │  │
 │  └───────────────────────────────────┘  │
 │                                         │
