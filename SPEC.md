@@ -235,7 +235,36 @@ The UI sections map 1:1 to the Android BLE Config app screens:
 - Default: follows OS preference (`prefers-color-scheme`)
 - See `docs/BRAND_THEME.md` for the full Mobilinkd design system
 
-## 7. Out of Scope
+## 7. Protocol vs. UI Requirements
+
+The hardware BLE KISS protocol supports many commands. **Not all protocol capabilities are exposed in the UI.** Only features that appear in the iOS and Android BLEConfig apps are shown to the user.
+
+### 7.1 Protocol Support Requirements
+
+Everything the hardware supports must be documented and implemented in the BLE protocol layer (KISS encoder/decoder, command send/receive), even if not surfaced in the UI. This ensures:
+- The app can receive and handle any valid hardware response
+- Future features can be added without protocol changes
+- The log view can distinguish valid from invalid data
+
+### 7.2 UI/UX Requirements
+
+Only features that are:
+1. Present in the iOS (`iosTncConfig`) and Android (`BLEConfig`) BLE apps, **AND**
+2. Applicable to BLE TNC hardware (not legacy non-BLE features like squelch, connection tracking, DCD)
+
+are shown in the UI. All other protocol capabilities are implemented but hidden.
+
+### 7.3 Planned: Protocol Log View
+
+A future update will add a log panel that captures raw protocol traffic and warns in two distinct cases:
+
+**Warning (yellow):** *Unexpected but valid* — the hardware sent a correctly-formed command/response that the UI has no handler for (e.g., a future hardware revision sends a response the current app doesn't recognize). The data is valid KISS but unhandled.
+
+**Error (red):** *Invalid data* — received bytes that cannot be parsed as a valid KISS frame. The frame fails checksum, has malformed escaping, or contains undefined command values.
+
+The log is useful during development and for users reporting issues. It is off by default and accessible via a collapse toggle.
+
+## 8. Out of Scope
 
 - Direct KISS data connection (APRS operation) — this is config only
 - Firmware update
@@ -244,7 +273,7 @@ The UI sections map 1:1 to the Android BLE Config app screens:
 - iOS Safari (broken Web Bluetooth support)
 - Android (use the native Android app)
 
-## 8. References
+## 9. References
 
 - [BLE-KISS-API Specification](https://github.com/hessu/aprs-specs/blob/master/BLE-KISS-API.md)
 - [KISS Protocol (Wikipedia)](https://en.wikipedia.org/wiki/KISS_(amateur_radio_protocol))
