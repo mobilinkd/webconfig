@@ -125,24 +125,33 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 - RX Polarity toggle
 - TX Polarity toggle
 
-### 4.5 Audio Settings
+### 4.5 Receive Audio
+
+**Note:** Receive audio streaming and transmit audio activity are mutually exclusive — the TNC cannot stream audio input and adjust audio output simultaneously. The UI must make this clear and switch between modes.
 
 - RX Input Gain: slider with range from device capabilities
 - RX Input Twist: slider with range from device capabilities
-- TX Output Gain: slider with range from device capabilities
-- TX Output Twist: slider with range from device capabilities
+- Live RX Level: real-time audio level bar (color-coded)
 - Squelch Level: slider
 
-### 4.6 Power Settings
+Controls for receive audio:
+- Start/Stop receive audio stream toggle
+- Auto-adjust input levels: one-shot activity (triggered once, not a persistent setting) via ADJUST_INPUT_LEVELS command
+
+### 4.6 Transmit Audio
+
+**Note:** Transmit audio and PTT control are grouped together — adjusting transmit levels and testing transmission are naturally paired activities.
+
+- TX Output Gain: slider with range from device capabilities
+- TX Output Twist: slider with range from device capabilities
+- PTT Style selector: Simplex (0) / Multiplex (1)
+- PTT buttons: Off / Mark / Space / Both
+
+### 4.7 Power Settings
 
 - Battery level display (mV with color-coded bar)
 - USB Power On toggle
 - USB Power Off toggle
-
-### 4.7 PTT Control
-
-- Transmit control: PTT Off / PTT Mark / PTT Space / PTT Both
-- PTT Style selector (channel)
 
 ### 4.8 Date/Time
 
@@ -179,9 +188,11 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 
 ## 6. UI Structure
 
+The UI sections map 1:1 to the Android BLE Config app screens:
+
 ```
 ┌─────────────────────────────────────────┐
-│  [Logo]  Mobilinkd TNC Config    [?]   │  ← Header
+│  [Logo]  Mobilinkd TNC Config    [☀/🌙]│  ← Header with theme toggle
 ├─────────────────────────────────────────┤
 │  ┌─────────┐  ┌──────────────────────┐   │
 │  │ Device  │  │                      │   │
@@ -189,32 +200,46 @@ Extended (cmd=0x06, subcmd=-0x3D = 0xC1):
 │  │ Status  │  │                      │   │
 │  └─────────┘  └──────────────────────┘   │
 │                                         │
-│  ┌─ TNC Info ────────────────────────┐  │
+│  ┌─ TNC Information ─────────────────┐  │
 │  │ Firmware | Hardware | Serial |   │  │
-│  │ Battery | MAC Address             │  │
+│  │ Battery | MAC Address | DateTime  │  │
 │  └───────────────────────────────────┘  │
 │                                         │
 │  ┌─ KISS Parameters ─────────────────┐  │
-│  │ TX Delay | Persistence | Slot    │  │
-│  │ TX Tail | Full Duplex            │  │
+│  │ TX Delay | Persistence | SlotTime  │  │
+│  │ TX Tail | Full Duplex             │  │
 │  └───────────────────────────────────┘  │
 │                                         │
 │  ┌─ Modem Configuration ─────────────┐  │
 │  │ Modem Type | Pass All | Polarity  │  │
 │  └───────────────────────────────────┘  │
 │                                         │
-│  ┌─ Audio Settings ──────────────────┐  │
-│  │ RX Gain | RX Twist | TX Gain |    │  │
-│  │ TX Twist | Squelch               │  │
+│  ┌─ Receive Audio ───────────────────┐  │
+│  │ Input Gain | Input Twist | Squelch │  │
+│  │ [Start/Stop] Live Level Bar       │  │
+│  │ [Auto-Adjust] (one-shot, not opt)  │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  ┌─ Transmit Audio ──────────────────┐  │
+│  │ Output Gain | Output Twist         │  │
+│  │ PTT Style: Simplex / Multiplex    │  │
+│  │ [Off] [Mark] [Space] [Both] PTT   │  │
 │  └───────────────────────────────────┘  │
 │                                         │
 │  ┌─ Power Settings ──────────────────┐  │
-│  │ Battery | USB Power On/Off        │  │
+│  │ Battery (mV bar) | USB On/Off       │  │
 │  └───────────────────────────────────┘  │
 │                                         │
 │  [ Save to Device ]  [ Revert ]        │
 └─────────────────────────────────────────┘
 ```
+
+### 6.1 Theme Support
+
+- Light and dark mode, user-selectable via toggle in header
+- Theme preference persisted in localStorage
+- Default: follows OS preference (`prefers-color-scheme`)
+- See `docs/BRAND_THEME.md` for the full Mobilinkd design system
 
 ## 7. Out of Scope
 

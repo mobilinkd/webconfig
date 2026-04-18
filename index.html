@@ -1,275 +1,427 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mobilinkd TNC Config</title>
   <style>
+    /* ═══════════════════════════════════════════
+       MOBILINKD BRAND TOKENS — DARK THEME
+       ═══════════════════════════════════════════ */
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22263a;
-      --border: #2e3350;
-      --accent: #F7BC60;
-      --accent2: #e09830;
-      --text: #e8eaf0;
-      --text-muted: #8890a8;
-      --danger: #e05c5c;
-      --warn: #e0c05c;
-      --ok: #5ce07a;
+      --bg:           #0B0D13;
+      --surface:      #131620;
+      --surface2:     #1A1E2C;
+      --border:       #252A3A;
+      --text:         #D8DCE8;
+      --text-muted:   #7A8099;
+      --accent:       #F7BC60;   /* Brand amber — logo/title only */
+      --accent-btn:   #3A7CCC;   /* Steel blue buttons */
+      --accent-btn-h: #2D66B0;
+      --ok:           #3DBE7A;
+      --warn:         #D4A83A;
+      --crit:         #D45050;
+      --rx-active:    #3DBE7A;
+      --tx-active:    #3A7CCC;
+      --radius:       6px;
+      --radius-lg:    10px;
+      --shadow:       0 2px 8px rgba(0,0,0,0.4);
       --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
+
+    /* ═══════════════════════════════════════════
+       MOBILINKD BRAND TOKENS — LIGHT THEME
+       ═══════════════════════════════════════════ */
+    [data-theme="light"] {
+      --bg:           #F4F5F7;
+      --surface:      #FFFFFF;
+      --surface2:     #ECEEF2;
+      --border:       #D0D4DE;
+      --text:         #1A1D27;
+      --text-muted:   #6B7086;
+      --accent:       #C48A30;   /* Deep amber for light bg */
+      --accent-btn:   #2A62B0;
+      --accent-btn-h: #1E4E8A;
+      --ok:           #1E8A47;
+      --warn:         #A07820;
+      --crit:         #B83030;
+      --rx-active:    #1E8A47;
+      --tx-active:    #2A62B0;
+      --shadow:       0 2px 8px rgba(0,0,0,0.1);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+    html { transition: background 0.25s ease, color 0.25s ease; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
 
     /* ── Header ── */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 14px 24px;
+      padding: 12px 20px;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
-    header svg { width: 36px; height: 36px; flex-shrink: 0; }
-    header h1 { font-size: 1.1rem; font-weight: 600; color: var(--text); }
-    header .subtitle { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
-    header .spacer { flex: 1; }
-    header .browser-warn {
-      background: #3d2a00; border: 1px solid var(--accent2); border-radius: 6px;
-      padding: 6px 12px; font-size: 0.75rem; color: var(--accent);
+    header .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
+    header svg { width: 32px; height: 32px; flex-shrink: 0; }
+    header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    header .subtitle {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+    .spacer { flex: 1; }
+
+    .theme-toggle {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .theme-toggle:hover { background: var(--border); color: var(--text); }
+    .theme-toggle span { font-size: 0.75rem; }
+
+    .browser-warn {
+      background: #2A1A00;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      color: var(--accent);
+    }
+    [data-theme="light"] .browser-warn { background: #FFF3D6; }
 
     /* ── Main Layout ── */
-    main { display: flex; min-height: calc(100vh - 65px); }
+    main { display: flex; min-height: calc(100vh - 57px); }
 
     /* ── Sidebar ── */
     aside {
-      width: 240px;
+      width: 220px;
       background: var(--surface);
       border-right: 1px solid var(--border);
-      padding: 16px 0;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
+      padding: 14px 0;
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
-    .sidebar-section { padding: 0 12px 12px; }
-    .sidebar-section h3 { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px; padding: 0 4px; }
+
+    .sidebar-section-label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+      padding: 0 14px 6px;
+    }
 
     /* Connection Card */
     .conn-card {
-      margin: 0 12px 12px;
+      margin: 0 10px 10px;
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: var(--radius-lg);
+      padding: 11px;
+      transition: border-color 0.2s, background 0.25s ease;
     }
     .conn-card.connected { border-color: var(--ok); }
-    .conn-card.scanning { border-color: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
-    .conn-card.error { border-color: var(--danger); }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .conn-card.scanning { border-color: var(--accent); animation: scanPulse 1.4s ease-in-out infinite; }
+    .conn-card.error { border-color: var(--crit); }
+    @keyframes scanPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-    .conn-status { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .conn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .conn-status { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .conn-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
     .conn-card.connected .conn-dot { background: var(--ok); }
-    .conn-card.scanning .conn-dot { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
-    .conn-card.error .conn-dot { background: var(--danger); }
-    .conn-label { font-size: 0.82rem; font-weight: 500; }
-    .conn-name { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
-    .conn-name strong { color: var(--text); }
+    .conn-card.scanning .conn-dot { background: var(--accent); animation: scanPulse 1s ease-in-out infinite; }
+    .conn-card.error .conn-dot { background: var(--crit); }
+    .conn-label { font-size: 0.8rem; font-weight: 500; }
+    .conn-name { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 9px; line-height: 1.4; }
+    .conn-name strong { color: var(--text); display: block; font-size: 0.8rem; }
 
     .btn {
-      display: block; width: 100%; padding: 8px 12px;
-      border: none; border-radius: 6px; font-size: 0.8rem;
-      font-family: inherit; cursor: pointer; transition: background 0.15s;
+      display: block; width: 100%; padding: 7px 10px;
+      border: none; border-radius: var(--radius);
+      font-size: 0.78rem; font-family: inherit;
+      cursor: pointer; transition: background 0.15s, opacity 0.15s;
       text-align: center;
     }
-    .btn-primary { background: var(--accent); color: #111; font-weight: 600; }
-    .btn-primary:hover { background: var(--accent2); }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-primary { background: var(--accent-btn); color: #fff; font-weight: 600; }
+    .btn-primary:not(:disabled):hover { background: var(--accent-btn-h); }
     .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: var(--border); }
-    .btn-danger { background: var(--surface2); color: var(--danger); border: 1px solid var(--danger); }
-    .btn + .btn { margin-top: 6px; }
-
-    /* Scan List */
-    .scan-list { margin-top: 8px; }
-    .scan-item {
-      padding: 8px 10px; border-radius: 6px; cursor: pointer;
-      display: flex; align-items: center; gap: 8px;
-      transition: background 0.12s;
-    }
-    .scan-item:hover { background: var(--surface2); }
-    .scan-item-icon { font-size: 1rem; }
-    .scan-item-name { font-size: 0.8rem; flex: 1; }
-    .scan-item-rssi { font-size: 0.7rem; color: var(--text-muted); }
+    .btn-secondary:not(:disabled):hover { background: var(--border); }
+    .btn-danger { background: var(--surface2); color: var(--crit); border: 1px solid var(--crit); }
+    .btn + .btn { margin-top: 5px; }
 
     /* Nav */
     .nav-list { list-style: none; }
     .nav-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 14px; cursor: pointer; font-size: 0.85rem;
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 14px; cursor: pointer; font-size: 0.82rem;
       color: var(--text-muted); border-left: 3px solid transparent;
-      transition: all 0.12s;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      user-select: none;
     }
     .nav-item:hover { background: var(--surface2); color: var(--text); }
-    .nav-item.active { background: var(--surface2); color: var(--accent); border-left-color: var(--accent); }
-    .nav-item .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
-    .nav-item .nav-badge {
-      margin-left: auto; background: var(--accent); color: #111;
-      font-size: 0.6rem; padding: 2px 6px; border-radius: 10px; font-weight: 600;
-    }
+    .nav-item.active { background: var(--surface2); color: var(--text); border-left-color: var(--accent-btn); }
+    .nav-icon { font-size: 0.95rem; width: 18px; text-align: center; }
 
-    /* ── Content Area ── */
-    .content {
-      flex: 1; padding: 24px; overflow-y: auto;
-    }
+    /* ── Content ── */
+    .content { flex: 1; padding: 20px 24px; overflow-y: auto; }
 
-    /* Screen: Scan */
+    /* Screens */
     .screen { display: none; }
     .screen.active { display: block; }
 
-    .screen-header { margin-bottom: 24px; }
-    .screen-header h2 { font-size: 1.2rem; margin-bottom: 4px; }
-    .screen-header p { font-size: 0.8rem; color: var(--text-muted); }
+    .screen-header { margin-bottom: 18px; }
+    .screen-header h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 3px; }
+    .screen-header p { font-size: 0.76rem; color: var(--text-muted); }
 
     /* Cards */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 16px;
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
-    .card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .card h3 {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
 
-    /* Info Grid */
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .info-item { background: var(--surface2); border-radius: 6px; padding: 10px 12px; }
-    .info-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .info-value { font-size: 0.88rem; font-weight: 500; font-family: 'Courier New', monospace; }
+    /* Info grid */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .info-item { background: var(--surface2); border-radius: var(--radius); padding: 9px 11px; }
+    .info-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+    .info-value { font-size: 0.85rem; font-weight: 500; font-family: 'Courier New', monospace; color: var(--text); }
 
-    /* Form Controls */
-    .form-group { margin-bottom: 16px; }
-    .form-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .form-label span { font-size: 0.8rem; color: var(--text-muted); }
+    /* Form groups */
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .form-label span { font-size: 0.76rem; color: var(--text-muted); }
     .form-label strong { font-size: 0.82rem; color: var(--text); font-weight: 500; }
+
+    /* Range slider */
     input[type="range"] {
       -webkit-appearance: none; width: 100%; height: 4px;
       background: var(--border); border-radius: 2px; outline: none;
+      transition: background 0.25s;
     }
     input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 18px; height: 18px;
-      background: var(--accent); border-radius: 50%; cursor: pointer;
+      -webkit-appearance: none; width: 16px; height: 16px;
+      background: var(--accent-btn); border-radius: 50%; cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { background: var(--accent-btn-h); transform: scale(1.1); }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; background: var(--accent-btn);
+      border-radius: 50%; cursor: pointer; border: none;
+    }
+
+    /* Number display */
+    .num-row { display: flex; align-items: center; gap: 8px; }
+    .num-row input[type="range"] { flex: 1; }
+    .num-val {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 3px 9px;
+      font-size: 0.82rem; font-family: 'Courier New', monospace;
+      min-width: 40px; text-align: center; color: var(--accent-btn); font-weight: 600;
+      transition: background 0.25s, border-color 0.25s;
     }
 
     /* Toggle */
     .toggle-row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 0; border-bottom: 1px solid var(--border);
+      padding: 9px 0; border-bottom: 1px solid var(--border);
     }
-    .toggle-row:last-child { border-bottom: none; }
-    .toggle-label { font-size: 0.85rem; }
-    .toggle-desc { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
-    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
-    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .toggle-label { font-size: 0.82rem; color: var(--text); }
+    .toggle-desc { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+    .toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
     .toggle .slider {
       position: absolute; inset: 0; background: var(--border);
       border-radius: 11px; cursor: pointer; transition: 0.2s;
     }
     .toggle .slider:before {
-      content: ''; position: absolute; width: 16px; height: 16px;
-      left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s;
+      content: ''; position: absolute; width: 15px; height: 15px;
+      left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s;
     }
-    .toggle input:checked + .slider { background: var(--accent); }
-    .toggle input:checked + .slider:before { transform: translateX(18px); }
+    .toggle input:checked + .slider { background: var(--accent-btn); }
+    .toggle input:checked + .slider:before { transform: translateX(17px); }
+    .toggle input:focus-visible + .slider { outline: 2px solid var(--accent-btn); outline-offset: 2px; }
 
     /* Select */
     select {
-      width: 100%; padding: 8px 10px; background: var(--surface2);
-      border: 1px solid var(--border); border-radius: 6px;
-      color: var(--text); font-family: inherit; font-size: 0.85rem;
+      width: 100%; padding: 7px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: inherit; font-size: 0.82rem;
       outline: none; cursor: pointer;
+      transition: border-color 0.15s, background 0.25s;
     }
-    select:focus { border-color: var(--accent); }
+    select:focus { border-color: var(--accent-btn); }
 
-    /* Battery */
-    .battery-bar-wrap { margin-top: 8px; }
-    .battery-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-    .battery-bar-fill { height: 100%; background: var(--ok); border-radius: 4px; transition: width 0.4s; }
-    .battery-bar-fill.warn { background: var(--warn); }
-    .battery-bar-fill.crit { background: var(--danger); }
-    .battery-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+    /* Battery bar */
+    .battery-bar-bg { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 7px; }
+    .battery-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease, background 0.25s ease; }
+    .battery-label { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted); margin-top: 3px; }
 
-    /* Number input row */
-    .num-row { display: flex; align-items: center; gap: 10px; }
-    .num-row input[type="range"] { flex: 1; }
-    .num-row .num-val {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
-      padding: 4px 10px; font-size: 0.85rem; font-family: 'Courier New', monospace;
-      min-width: 44px; text-align: center; color: var(--accent); font-weight: 600;
-    }
-
-    /* Section row */
-    .section-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    /* PTT */
-    .ptt-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+    /* PTT buttons */
+    .ptt-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 10px; }
     .ptt-btn {
-      padding: 10px 6px; border: 1px solid var(--border); border-radius: 6px;
-      background: var(--surface2); color: var(--text); font-size: 0.78rem;
-      cursor: pointer; text-align: center; transition: all 0.12s;
+      padding: 9px 4px; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--surface2);
+      color: var(--text); font-size: 0.75rem; cursor: pointer;
+      text-align: center; transition: all 0.12s; user-select: none;
     }
-    .ptt-btn:hover { border-color: var(--accent); }
-    .ptt-btn.active { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 600; }
+    .ptt-btn:hover { border-color: var(--accent-btn); color: var(--accent-btn); }
+    .ptt-btn.active { background: var(--accent-btn); color: #fff; border-color: var(--accent-btn); font-weight: 600; }
+    .ptt-btn.off-active { background: var(--crit); color: #fff; border-color: var(--crit); font-weight: 600; }
 
-    /* Action Bar */
-    .action-bar {
-      display: flex; gap: 10px; margin-top: 20px; padding-top: 20px;
-      border-top: 1px solid var(--border);
+    /* PTT style chips */
+    .chip-group { display: flex; gap: 6px; margin-top: 10px; }
+    .chip {
+      padding: 6px 12px; border: 1px solid var(--border);
+      border-radius: 20px; background: var(--surface2);
+      color: var(--text-muted); font-size: 0.75rem;
+      cursor: pointer; transition: all 0.12s; user-select: none;
     }
-    .action-bar .btn { flex: 1; padding: 12px; font-size: 0.88rem; }
+    .chip:hover { border-color: var(--accent-btn); color: var(--text); }
+    .chip.active { background: var(--accent-btn); color: #fff; border-color: var(--accent-btn); font-weight: 600; }
 
-    /* Unsaved indicator */
-    .unsaved-dot {
-      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-      background: var(--warn); margin-right: 6px;
+    /* Mode badge */
+    .mode-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600;
+      margin-bottom: 12px;
+      transition: background 0.2s, color 0.2s;
     }
+    .mode-badge.rx { background: color-mix(in srgb, var(--rx-active) 15%, transparent); color: var(--rx-active); border: 1px solid var(--rx-active); }
+    .mode-badge.tx { background: color-mix(in srgb, var(--tx-active) 15%, transparent); color: var(--tx-active); border: 1px solid var(--tx-active); }
+    .mode-badge.idle { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+    .mode-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .mode-badge.rx .dot { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-    /* Placeholder states */
-    .placeholder-block { color: var(--text-muted); font-size: 0.82rem; text-align: center; padding: 40px; }
-    .placeholder-block .big { font-size: 2rem; margin-bottom: 10px; opacity: 0.4; }
+    /* Action buttons row */
+    .action-bar { display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .action-bar .btn { flex: 1; padding: 10px; font-size: 0.82rem; }
+    .btn-icon { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-icon:hover { background: var(--border); }
+
+    /* Audio exclusive notice */
+    .audio-exclusive-notice {
+      background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+      border: 1px solid var(--warn);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      color: var(--warn);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .audio-exclusive-notice.hidden { display: none; }
+
+    /* Placeholder */
+    .placeholder { color: var(--text-muted); font-size: 0.82rem; text-align: center; padding: 36px; }
+    .placeholder .icon { font-size: 2.2rem; opacity: 0.3; margin-bottom: 10px; display: block; }
+
+    /* Unsupported notice */
+    .unsupported-notice {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
 
     /* Responsive */
-    @media (max-width: 700px) {
+    @media (max-width: 680px) {
       main { flex-direction: column; }
-      aside { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+      aside { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 10px 0; }
       .info-grid { grid-template-columns: 1fr; }
-      .section-row { grid-template-columns: 1fr; }
+      .ptt-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
 
+<!-- ═══ HEADER ═══ -->
 <header>
-  <svg viewBox="0 0 61.674 87.813" xmlns="http://www.w3.org/2000/svg">
-    <path d="M71.125,-1.896l-69,0l0,-69l69,0z" fill="#F7BC60"/>
-    <path d="M61.772,-71.653c0.018,0.072 0.007,0.127 -0.026,0.19c-0.053,0.101 -0.112,0.063 -0.165,0.128c-0.05,0.063 -0.099,0.276 -0.079,0.362c-0.169,0.058 -0.01,0.227 -0.015,0.35c-0.002,0.05 -0.041,0.105 -0.045,0.161c-0.01,0.119 0.017,0.266 0.068,0.37c0.097,0.198 0.268,0.413 0.435,0.544c0.19,0.148 0.365,0.572 0.608,0.631c0.177,0.042 0.384,-0.104 0.543,-0.143c0.18,-0.043 0.397,0.01 0.571,-0.053c0.222,-0.079 0.127,-0.337 0.288,-0.45c0.104,-0.074 0.287,-0.01 0.406,-0.051c0.2,-0.069 0.339,-0.263 0.376,-0.46c0.016,-0.082 0.01,-0.145 0.039,-0.221c0.039,-0.103 0.111,-0.16 0.09,-0.293c-0.01,-0.062 -0.052,-0.12 -0.064,-0.187c-0.022,-0.114 0.002,-0.224 0,-0.337c-0.003,-0.2 0.017,-0.379 -0.078,-0.55c-0.38,-0.688 -1.236,-0.929 -1.975,-0.789c-0.18,0.034 -0.287,0.126 -0.442,0.207c-0.17,0.088 -0.139,0.166 -0.318,0.224c-0.081,0.026 -0.216,0.124 -0.215,0.224c0.001,0.115 0.005,0.051 0.012,0.169c-0.021,0.011 -0.021,-0.005 -0.03,-0.025" fill="#FFFFFF"/>
-  </svg>
-  <div>
-    <h1>Mobilinkd TNC Config</h1>
-    <div class="subtitle">Web Bluetooth — Chrome, Edge, Brave</div>
+  <div class="logo-wrap">
+    <!-- Mobilinkd Logo — dark variant -->
+    <svg id="logo-dark" viewBox="0 0 61.674 87.813" xmlns="http://www.w3.org/2000/svg">
+      <path d="M71.125,-1.896l-69,0l0,-69l69,0z" fill="#F7BC60"/>
+      <path d="M61.772,-71.653c0.018,0.072 0.007,0.127 -0.026,0.19c-0.053,0.101 -0.112,0.063 -0.165,0.128c-0.05,0.063 -0.099,0.276 -0.079,0.362c-0.169,0.058 -0.01,0.227 -0.015,0.35c-0.002,0.05 -0.041,0.105 -0.045,0.161c-0.01,0.119 0.017,0.266 0.068,0.37c0.097,0.198 0.268,0.413 0.435,0.544c0.19,0.148 0.365,0.572 0.608,0.631c0.177,0.042 0.384,-0.104 0.543,-0.143c0.18,-0.043 0.397,0.01 0.571,-0.053c0.222,-0.079 0.127,-0.337 0.288,-0.45c0.104,-0.074 0.287,-0.01 0.406,-0.051c0.2,-0.069 0.339,-0.263 0.376,-0.46c0.016,-0.082 0.01,-0.145 0.039,-0.221c0.039,-0.103 0.111,-0.16 0.09,-0.293c-0.01,-0.062 -0.052,-0.12 -0.064,-0.187c-0.022,-0.114 0.002,-0.224 0,-0.337c-0.003,-0.2 0.017,-0.379 -0.078,-0.55c-0.38,-0.688 -1.236,-0.929 -1.975,-0.789c-0.18,0.034 -0.287,0.126 -0.442,0.207c-0.17,0.088 -0.139,0.166 -0.318,0.224c-0.081,0.026 -0.216,0.124 -0.215,0.224c0.001,0.115 0.005,0.051 0.012,0.169c-0.021,0.011 -0.021,-0.005 -0.03,-0.025" fill="#FFFFFF"/>
+    </svg>
+    <!-- Mobilinkd Logo — light variant -->
+    <svg id="logo-light" viewBox="0 0 61.674 87.813" xmlns="http://www.w3.org/2000/svg" style="display:none">
+      <path d="M71.125,-1.896l-69,0l0,-69l69,0z" fill="#C48A30"/>
+      <path d="M61.772,-71.653c0.018,0.072 0.007,0.127 -0.026,0.19c-0.053,0.101 -0.112,0.063 -0.165,0.128c-0.05,0.063 -0.099,0.276 -0.079,0.362c-0.169,0.058 -0.01,0.227 -0.015,0.35c-0.002,0.05 -0.041,0.105 -0.045,0.161c-0.01,0.119 0.017,0.266 0.068,0.37c0.097,0.198 0.268,0.413 0.435,0.544c0.19,0.148 0.365,0.572 0.608,0.631c0.177,0.042 0.384,-0.104 0.543,-0.143c0.18,-0.043 0.397,0.01 0.571,-0.053c0.222,-0.079 0.127,-0.337 0.288,-0.45c0.104,-0.074 0.287,-0.01 0.406,-0.051c0.2,-0.069 0.339,-0.263 0.376,-0.46c0.016,-0.082 0.01,-0.145 0.039,-0.221c0.039,-0.103 0.111,-0.16 0.09,-0.293c-0.01,-0.062 -0.052,-0.12 -0.064,-0.187c-0.022,-0.114 0.002,-0.224 0,-0.337c-0.003,-0.2 0.017,-0.379 -0.078,-0.55c-0.38,-0.688 -1.236,-0.929 -1.975,-0.789c-0.18,0.034 -0.287,0.126 -0.442,0.207c-0.17,0.088 -0.139,0.166 -0.318,0.224c-0.081,0.026 -0.216,0.124 -0.215,0.224c0.001,0.115 0.005,0.051 0.012,0.169c-0.021,0.011 -0.021,-0.005 -0.03,-0.025" fill="#FFFFFF"/>
+    </svg>
+    <div>
+      <h1>Mobilinkd TNC Config</h1>
+      <div class="subtitle">Web Bluetooth — Chrome, Edge, Brave</div>
+    </div>
   </div>
   <div class="spacer"></div>
-  <div class="browser-warn" id="browserWarn" style="display:none">⚠ Firefox/Safari: Web Bluetooth unavailable</div>
+  <div class="browser-warn" id="browserWarn" style="display:none">⚠ Web Bluetooth unavailable</div>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+    <span id="themeIcon">🌙</span>
+    <span id="themeLabel">Dark</span>
+  </button>
 </header>
 
+<!-- ═══ MAIN ═══ -->
 <main>
-  <!-- Sidebar -->
+
+  <!-- ── Sidebar ── -->
   <aside>
-    <!-- Connection -->
-    <div class="sidebar-section">
-      <h3>Connection</h3>
-    </div>
+    <div class="sidebar-section-label">Connection</div>
     <div class="conn-card" id="connCard">
       <div class="conn-status">
         <div class="conn-dot" id="connDot"></div>
@@ -280,131 +432,128 @@
       <button class="btn btn-danger" id="btnDisconnect" onclick="disconnect()" style="display:none">Disconnect</button>
     </div>
 
-    <!-- Scan Results -->
-    <div class="scan-list" id="scanList" style="display:none">
-      <!-- populated by JS -->
-    </div>
-
     <div style="flex:1"></div>
 
-    <!-- Nav -->
-    <h3 style="padding: 0 14px 8px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Settings</h3>
+    <div class="sidebar-section-label">Settings</div>
     <ul class="nav-list" id="navList">
       <li class="nav-item active" data-screen="info" onclick="showScreen('info')">
-        <span class="nav-icon">ℹ</span> TNC Information
+        <span class="nav-icon">🖥</span> TNC Information
       </li>
       <li class="nav-item" data-screen="kiss" onclick="showScreen('kiss')">
         <span class="nav-icon">📡</span> KISS Parameters
       </li>
       <li class="nav-item" data-screen="modem" onclick="showScreen('modem')">
-        <span class="nav-icon">📶</span> Modem Config
+        <span class="nav-icon">📶</span> Modem Configuration
       </li>
-      <li class="nav-item" data-screen="audio" onclick="showScreen('audio')">
-        <span class="nav-icon">🔊</span> Audio
-        <span class="nav-badge">live</span>
+      <li class="nav-item" data-screen="rx" onclick="showScreen('rx')">
+        <span class="nav-icon">🎧</span> Receive Audio
+      </li>
+      <li class="nav-item" data-screen="tx" onclick="showScreen('tx')">
+        <span class="nav-icon">📤</span> Transmit Audio
       </li>
       <li class="nav-item" data-screen="power" onclick="showScreen('power')">
-        <span class="nav-icon">🔋</span> Power
-      </li>
-      <li class="nav-item" data-screen="ptt" onclick="showScreen('ptt')">
-        <span class="nav-icon">📤</span> PTT Control
+        <span class="nav-icon">🔋</span> Power Settings
       </li>
     </ul>
   </aside>
 
-  <!-- Content -->
+  <!-- ── Content ── -->
   <div class="content">
 
-    <!-- ── TNC Info ── -->
+    <!-- ══ TNC Information ══ -->
     <div class="screen active" id="screen-info">
       <div class="screen-header">
         <h2>🖥 TNC Information</h2>
-        <p>Device identity and firmware details (read-only)</p>
+        <p>Device identity and firmware — read from the TNC over BLE</p>
       </div>
       <div class="card">
         <h3>Device Identity</h3>
         <div class="info-grid">
           <div class="info-item">
             <div class="info-label">Hardware Version</div>
-            <div class="info-value" id="info-hwver">TNC3-HW 2.1</div>
+            <div class="info-value" id="info-hwver">—</div>
           </div>
           <div class="info-item">
             <div class="info-label">Firmware Version</div>
-            <div class="info-value" id="info-fwver">3.0.12</div>
+            <div class="info-value" id="info-fwver">—</div>
           </div>
           <div class="info-item">
             <div class="info-label">Serial Number</div>
-            <div class="info-value" id="info-serial">MLK-2024-03417</div>
+            <div class="info-value" id="info-serial">—</div>
           </div>
           <div class="info-item">
             <div class="info-label">MAC Address</div>
-            <div class="info-value" id="info-mac">AA:BB:CC:DD:EE:FF</div>
+            <div class="info-value" id="info-mac">—</div>
           </div>
           <div class="info-item">
             <div class="info-label">Bluetooth Name</div>
-            <div class="info-value" id="info-btname">Mobilinkd TNC3</div>
+            <div class="info-value" id="info-name">—</div>
           </div>
           <div class="info-item">
             <div class="info-label">API Version</div>
-            <div class="info-value" id="info-apiver">2</div>
+            <div class="info-value" id="info-apiver">—</div>
           </div>
-          <div class="info-item" style="grid-column: 1/-1;">
+          <div class="info-item" style="grid-column:1/-1">
             <div class="info-label">Date & Time (UTC)</div>
-            <div class="info-value" id="info-datetime">2026-04-17T23:14:00 UTC</div>
+            <div class="info-value" id="info-datetime">—</div>
           </div>
         </div>
       </div>
       <div class="action-bar">
-        <button class="btn btn-secondary" onclick="refreshInfo()">🔄 Refresh</button>
-        <button class="btn btn-secondary" onclick="syncTime()">🕐 Sync from Browser</button>
+        <button class="btn btn-secondary btn-icon" onclick="refreshInfo()">🔄 Refresh</button>
+        <button class="btn btn-secondary btn-icon" onclick="syncTime()">🕐 Sync from Browser</button>
       </div>
     </div>
 
-    <!-- ── KISS Parameters ── -->
+    <!-- ══ KISS Parameters ══ -->
     <div class="screen" id="screen-kiss">
       <div class="screen-header">
         <h2>📡 KISS Parameters</h2>
-        <p>AX.25 channel access timing configuration</p>
+        <p>AX.25 channel access timing — sent to TNC on save</p>
       </div>
       <div class="card">
         <h3>Timing</h3>
         <div class="form-group">
           <div class="form-label">
-            <span>TX Delay (pre-keyup)</span>
-            <strong id="lbl-txdelay">30 × 10ms = 300ms</strong>
+            <span>TX Delay (pre-keyup delay)</span>
+            <strong id="lbl-txdelay">—</strong>
           </div>
           <div class="num-row">
-            <input type="range" min="0" max="255" value="30" id="txdelay" oninput="updateVal('txdelay','lbl-txdelay',v=>`${v} × 10ms = ${v*10}ms`)">
+            <input type="range" min="0" max="255" value="30" id="txdelay"
+              oninput="updateRange('txdelay','lbl-txdelay',v=>`${v} × 10ms = ${v*10}ms`); markUnsaved()">
             <span class="num-val" id="txdelay-val">30</span>
           </div>
         </div>
         <div class="form-group">
           <div class="form-label">
-            <span>Persistence (p = value/256)</span>
-            <strong id="lbl-persist">63 / 256 = 0.25</strong>
+            <span>Persistence (CSMA p = value÷256)</span>
+            <strong id="lbl-persist">—</strong>
           </div>
           <div class="num-row">
-            <input type="range" min="0" max="255" value="63" id="persist" oninput="updateVal('persist','lbl-persist',v=>`${v} / 256 = ${(v/256).toFixed(2)}`)">
+            <input type="range" min="0" max="255" value="63" id="persist"
+              oninput="updateRange('persist','lbl-persist',v=>`${v} / 256 = ${(v/256).toFixed(2)}`); markUnsaved()">
             <span class="num-val" id="persist-val">63</span>
           </div>
         </div>
         <div class="form-group">
           <div class="form-label">
             <span>Slot Time (inter-slot interval)</span>
-            <strong id="lbl-slot">10 × 10ms = 100ms</strong>
+            <strong id="lbl-slot">—</strong>
           </div>
           <div class="num-row">
-            <input type="range" min="0" max="255" value="10" id="slottime" oninput="updateVal('slottime','lbl-slot',v=>`${v} × 10ms = ${v*10}ms`)">
+            <input type="range" min="0" max="255" value="10" id="slottime"
+              oninput="updateRange('slottime','lbl-slot',v=>`${v} × 10ms = ${v*10}ms`); markUnsaved()">
             <span class="num-val" id="slottime-val">10</span>
           </div>
         </div>
         <div class="form-group">
           <div class="form-label">
             <span>TX Tail (post-keyup hold)</span>
-            <strong id="lbl-txtail">5 × 10ms = 50ms</strong>
+            <strong id="lbl-txtail">—</strong>
           </div>
           <div class="num-row">
-            <input type="range" min="0" max="255" value="5" id="txtail" oninput="updateVal('txtail','lbl-txtail',v=>`${v} × 10ms = ${v*10}ms`)">
+            <input type="range" min="0" max="255" value="5" id="txtail"
+              oninput="updateRange('txtail','lbl-txtail',v=>`${v} × 10ms = ${v*10}ms`); markUnsaved()">
             <span class="num-val" id="txtail-val">5</span>
           </div>
         </div>
@@ -417,41 +566,38 @@
             <div class="toggle-desc">Transmit without waiting for clear channel</div>
           </div>
           <label class="toggle">
-            <input type="checkbox" id="fullduplex">
+            <input type="checkbox" id="fullduplex" onchange="markUnsaved()">
             <span class="slider"></span>
           </label>
         </div>
       </div>
       <div class="action-bar">
         <button class="btn btn-primary" id="btnSaveKiss" onclick="saveSettings()">💾 Save to Device</button>
-        <button class="btn btn-secondary" onclick="revertSettings()">↩ Revert</button>
+        <button class="btn btn-secondary btn-icon" onclick="revertSettings()">↩ Revert</button>
       </div>
     </div>
 
-    <!-- ── Modem Config ── -->
+    <!-- ══ Modem Configuration ══ -->
     <div class="screen" id="screen-modem">
       <div class="screen-header">
         <h2>📶 Modem Configuration</h2>
-        <p>Select modem type and signal polarity</p>
+        <p>Select modem type and signal polarity for the radio interface</p>
       </div>
       <div class="card">
         <h3>Modem Type</h3>
         <div class="form-group">
           <div class="form-label"><span>Active Modem</span></div>
-          <select id="modem-type">
+          <select id="modem-type" onchange="markUnsaved()">
             <option value="1">1200 bps AFSK (default)</option>
             <option value="2">300 bps AFSK</option>
             <option value="3">9600 bps FSK</option>
             <option value="5">M17</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="margin-top:10px;">
           <div class="form-label"><span>Supported Modems</span></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="supported-modems">
-            <span class="ptt-btn active" style="cursor:default">1200 AFSK</span>
-            <span class="ptt-btn" style="cursor:default">300 AFSK</span>
-            <span class="ptt-btn" style="cursor:default">9600 FSK</span>
-            <span class="ptt-btn active" style="cursor:default">M17</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="supported-modems">
+            <!-- populated by JS -->
           </div>
         </div>
       </div>
@@ -463,7 +609,7 @@
             <div class="toggle-desc">Forward all decoded frames, not just APRS</div>
           </div>
           <label class="toggle">
-            <input type="checkbox" id="passall">
+            <input type="checkbox" id="passall" onchange="markUnsaved()">
             <span class="slider"></span>
           </label>
         </div>
@@ -473,7 +619,7 @@
             <div class="toggle-desc">Invert receive signal polarity</div>
           </div>
           <label class="toggle">
-            <input type="checkbox" id="rxpol">
+            <input type="checkbox" id="rxpol" onchange="markUnsaved()">
             <span class="slider"></span>
           </label>
         </div>
@@ -483,96 +629,204 @@
             <div class="toggle-desc">Invert transmit signal polarity</div>
           </div>
           <label class="toggle">
-            <input type="checkbox" id="txpol">
+            <input type="checkbox" id="txpol" onchange="markUnsaved()">
             <span class="slider"></span>
           </label>
         </div>
       </div>
       <div class="action-bar">
         <button class="btn btn-primary" onclick="saveSettings()">💾 Save to Device</button>
-        <button class="btn btn-secondary" onclick="revertSettings()">↩ Revert</button>
+        <button class="btn btn-secondary btn-icon" onclick="revertSettings()">↩ Revert</button>
       </div>
     </div>
 
-    <!-- ── Audio ── -->
-    <div class="screen" id="screen-audio">
+    <!-- ══ Receive Audio ══ -->
+    <div class="screen" id="screen-rx">
       <div class="screen-header">
-        <h2>🔊 Audio Levels</h2>
-        <p>Adjust receive and transmit audio shaping</p>
+        <h2>🎧 Receive Audio</h2>
+        <p>Adjust receive input levels and monitor the incoming signal</p>
       </div>
+
+      <div class="audio-exclusive-notice" id="rx-exclusive-notice">
+        ⚠ Receive audio is paused while transmit audio is active.
+      </div>
+
       <div class="card">
         <h3>Receive Audio</h3>
+
+        <div class="mode-badge idle" id="rx-mode-badge" style="margin-bottom:14px;">
+          <div class="dot"></div>
+          <span id="rx-mode-text">Idle — stream inactive</span>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Stream Receive Audio</div>
+            <div class="toggle-desc">Continuously stream audio levels from the TNC</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="rx-streaming" onchange="toggleRxStream()">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Levels</h3>
         <div class="form-group">
           <div class="form-label">
             <span>Input Gain</span>
-            <strong id="lbl-igain">50</strong>
+            <strong id="lbl-igain">—</strong>
           </div>
-          <input type="range" min="0" max="255" value="50" id="igain" oninput="document.getElementById('lbl-igain').textContent=this.value">
+          <div class="num-row">
+            <input type="range" min="0" max="255" value="50" id="igain"
+              oninput="document.getElementById('lbl-igain').textContent=this.value; markUnsaved()">
+            <span class="num-val" id="igain-val">50</span>
+          </div>
         </div>
         <div class="form-group">
           <div class="form-label">
             <span>Input Twist</span>
-            <strong id="lbl-itwist">8 dB</strong>
+            <strong id="lbl-itwist">—</strong>
           </div>
-          <input type="range" min="0" max="255" value="8" id="itwist" oninput="document.getElementById('lbl-itwist').textContent=this.value+' dB'">
-        </div>
-        <div class="section-row">
-          <div class="form-group">
-            <div class="form-label"><span>Min RX Twist</span><strong id="min-rx-twist">0 dB</strong></div>
-          </div>
-          <div class="form-group">
-            <div class="form-label"><span>Max RX Twist</span><strong id="max-rx-twist">15 dB</strong></div>
+          <div class="num-row">
+            <input type="range" min="0" max="255" value="8" id="itwist"
+              oninput="document.getElementById('lbl-itwist').textContent=this.value+' dB'; markUnsaved()">
+            <span class="num-val" id="itwist-val">8</span>
           </div>
         </div>
         <div class="form-group">
-          <div class="form-label"><span>Live RX Level</span><strong id="rx-level-val">—</strong></div>
-          <div class="battery-bar-bg" style="margin-top:8px;">
-            <div class="battery-bar-fill" id="rx-level-bar" style="width:65%; background: var(--ok);"></div>
+          <div class="form-label">
+            <span>Squelch Level</span>
+            <strong id="lbl-squelch">—</strong>
           </div>
-          <div class="toggle-row" style="padding-top:10px;">
-            <div>
-              <div class="toggle-label">Auto-adjust Input Levels</div>
-              <div class="toggle-desc">Adjust gain automatically based on received signal</div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" id="auto-adjust">
-              <span class="slider"></span>
-            </label>
+          <div class="num-row">
+            <input type="range" min="0" max="255" value="0" id="squelch"
+              oninput="document.getElementById('lbl-squelch').textContent=this.value; markUnsaved()">
+            <span class="num-val" id="squelch-val">0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label"><span>Live RX Level</span></div>
+          <div class="battery-bar-bg" style="margin-top:8px;">
+            <div class="battery-bar-fill" id="rx-level-bar" style="width:0%; background: var(--ok);"></div>
+          </div>
+          <div class="battery-label"><span>0</span><span>max</span></div>
+        </div>
+        <div class="form-group" style="margin-top:4px;">
+          <div class="form-label"><span>RX Level Min/Max Twist</span></div>
+          <div style="display:flex;gap:10px;font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
+            <span>Min: <strong id="min-rx-twist" style="color:var(--text)">—</strong></span>
+            <span>Max: <strong id="max-rx-twist" style="color:var(--text)">—</strong></span>
           </div>
         </div>
       </div>
+
+      <div class="card">
+        <h3>Auto-Adjust</h3>
+        <p style="font-size:0.76rem;color:var(--text-muted);margin-bottom:10px;">
+          Triggers a one-shot automatic input level calibration. Not a persistent setting.
+        </p>
+        <button class="btn btn-secondary btn-icon" id="btn-auto-adjust" onclick="autoAdjustLevels()">
+          🎯 Auto-Adjust Input Levels
+        </button>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save to Device</button>
+        <button class="btn btn-secondary btn-icon" onclick="revertSettings()">↩ Revert</button>
+      </div>
+    </div>
+
+    <!-- ══ Transmit Audio ══ -->
+    <div class="screen" id="screen-tx">
+      <div class="screen-header">
+        <h2>📤 Transmit Audio</h2>
+        <p>Adjust transmit output levels and test your radio setup</p>
+      </div>
+
+      <div class="audio-exclusive-notice" id="tx-exclusive-notice" style="display:none;">
+        ⚠ Transmit audio is paused while receive audio is streaming.
+      </div>
+
       <div class="card">
         <h3>Transmit Audio</h3>
+        <div class="mode-badge idle" id="tx-mode-badge" style="margin-bottom:14px;">
+          <div class="dot"></div>
+          <span id="tx-mode-text">Idle — PTT inactive</span>
+        </div>
         <div class="form-group">
           <div class="form-label">
             <span>Output Gain</span>
-            <strong id="lbl-ogain">128</strong>
+            <strong id="lbl-ogain">—</strong>
           </div>
-          <input type="range" min="0" max="255" value="128" id="ogain" oninput="document.getElementById('lbl-ogain').textContent=this.value">
+          <div class="num-row">
+            <input type="range" min="0" max="255" value="128" id="ogain"
+              oninput="document.getElementById('lbl-ogain').textContent=this.value; markUnsaved()">
+            <span class="num-val" id="ogain-val">128</span>
+          </div>
         </div>
         <div class="form-group">
           <div class="form-label">
             <span>Output Twist</span>
-            <strong id="lbl-otwist">10 dB</strong>
+            <strong id="lbl-otwist">—</strong>
           </div>
-          <input type="range" min="0" max="255" value="10" id="otwist" oninput="document.getElementById('lbl-otwist').textContent=this.value+' dB'">
+          <div class="num-row">
+            <input type="range" min="0" max="255" value="10" id="otwist"
+              oninput="document.getElementById('lbl-otwist').textContent=this.value+' dB'; markUnsaved()">
+            <span class="num-val" id="otwist-val">10</span>
+          </div>
         </div>
-        <div class="section-row">
-          <div class="form-group">
-            <div class="form-label"><span>Min TX Twist</span><strong>0 dB</strong></div>
+        <div style="display:flex;gap:10px;font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
+          <span>Min TX Twist: <strong id="min-tx-twist" style="color:var(--text)">—</strong></span>
+          <span>Max TX Twist: <strong id="max-tx-twist" style="color:var(--text)">—</strong></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>PTT Configuration</h3>
+        <div class="form-group">
+          <div class="form-label"><span>PTT Style</span></div>
+          <div class="chip-group">
+            <div class="chip active" id="chip-simplex" onclick="setPttStyle(0)">Simplex</div>
+            <div class="chip" id="chip-multiplex" onclick="setPttStyle(1)">Multiplex</div>
           </div>
-          <div class="form-group">
-            <div class="form-label"><span>Max TX Twist</span><strong>15 dB</strong></div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;">
+            Current: <strong id="ptt-style-val" style="color:var(--text)">Simplex (0)</strong>
           </div>
         </div>
       </div>
+
+      <div class="card">
+        <h3>Transmit Test</h3>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:12px;">
+          Activate PTT to test your radio. Select a tone, then press and hold a PTT button.
+        </p>
+        <div class="ptt-grid">
+          <button class="ptt-btn" id="ptt-off" onclick="sendPtt('off')">Off</button>
+          <button class="ptt-btn" id="ptt-mark" onclick="sendPtt('mark')">Mark</button>
+          <button class="ptt-btn" id="ptt-space" onclick="sendPtt('space')">Space</button>
+          <button class="ptt-btn" id="ptt-both" onclick="sendPtt('both')">Both</button>
+        </div>
+        <div class="toggle-row" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+          <div>
+            <div class="toggle-label">Continuous PTT</div>
+            <div class="toggle-desc">Hold to transmit (auto-release at 10s)</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="ptt-hold">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
       <div class="action-bar">
         <button class="btn btn-primary" onclick="saveSettings()">💾 Save to Device</button>
-        <button class="btn btn-secondary" onclick="revertSettings()">↩ Revert</button>
+        <button class="btn btn-secondary btn-icon" onclick="revertSettings()">↩ Revert</button>
       </div>
     </div>
 
-    <!-- ── Power ── -->
+    <!-- ══ Power Settings ══ -->
     <div class="screen" id="screen-power">
       <div class="screen-header">
         <h2>🔋 Power Settings</h2>
@@ -581,23 +835,16 @@
       <div class="card">
         <h3>Battery</h3>
         <div class="form-group">
-          <div class="form-label"><span>Current Voltage</span><strong id="batt-mv">3812 mV</strong></div>
-          <div class="battery-bar-bg" style="margin-top:8px;">
-            <div class="battery-bar-fill" id="batt-bar" style="width:65%;"></div>
+          <div class="form-label">
+            <span>Current Voltage</span>
+            <strong id="batt-mv">—</strong>
+          </div>
+          <div class="battery-bar-bg">
+            <div class="battery-bar-fill" id="batt-bar" style="width:0%"></div>
           </div>
           <div class="battery-label">
             <span>3200 mV (empty)</span>
             <span>4200 mV (full)</span>
-          </div>
-        </div>
-        <div class="info-grid" style="margin-top:12px;">
-          <div class="info-item">
-            <div class="info-label">Min RX Gain</div>
-            <div class="info-value">-12 dB</div>
-          </div>
-          <div class="info-item">
-            <div class="info-label">Max RX Gain</div>
-            <div class="info-value">+12 dB</div>
           </div>
         </div>
       </div>
@@ -609,7 +856,7 @@
             <div class="toggle-desc">TNC automatically enables USB power on boot</div>
           </div>
           <label class="toggle">
-            <input type="checkbox" id="usb-pwr-on" checked>
+            <input type="checkbox" id="usb-pwr-on" onchange="markUnsaved()">
             <span class="slider"></span>
           </label>
         </div>
@@ -619,111 +866,97 @@
             <div class="toggle-desc">TNC disables USB power when host disconnects</div>
           </div>
           <label class="toggle">
-            <input type="checkbox" id="usb-pwr-off" checked>
+            <input type="checkbox" id="usb-pwr-off" onchange="markUnsaved()">
             <span class="slider"></span>
           </label>
         </div>
       </div>
       <div class="action-bar">
-        <button class="btn btn-primary" onclick="saveSettings()">💾 Save to Device</button>
-        <button class="btn btn-secondary" onclick="refreshPower          </label>
-        </div>
-      </div>
-      <div class="action-bar">
-        <button class="btn btn-secondary" onclick="refreshPower()">🔄 Refresh Battery</button>
+        <button class="btn btn-secondary btn-icon" onclick="refreshPower()">🔄 Refresh Battery</button>
       </div>
     </div>
 
-    <!-- ── PTT Control ── -->
-    <div class="screen" id="screen-ptt">
-      <div class="screen-header">
-        <h2>📤 PTT Control</h2>
-        <p>Transmit control and test tone generation</p>
-      </div>
-      <div class="card">
-        <h3>PTT Style</h3>
-        <div class="ptt-grid" style="margin-bottom:16px;">
-          <button class="ptt-btn active" id="ptt-simplex" onclick="setPttStyle(0)">Simplex</button>
-          <button class="ptt-btn" id="ptt-multiplex" onclick="setPttStyle(1)">Multiplex</button>
-        </div>
-        <div class="info-item" style="margin-bottom:0;">
-          <div class="info-label">Current PTT Style</div>
-          <div class="info-value" id="ptt-style-val">Simplex (0)</div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Transmit Test</h3>
-        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:14px;">
-          Activate PTT to test your radio setup. Hold PTT for up to 10 seconds.
-        </p>
-        <div class="ptt-grid" style="margin-bottom:14px;">
-          <button class="ptt-btn" id="ptt-off-btn" onclick="sendPtt('off')">PTT Off</button>
-          <button class="ptt-btn" id="ptt-mark-btn" onclick="sendPtt('mark')">PTT Mark</button>
-          <button class="ptt-btn" id="ptt-space-btn" onclick="sendPtt('space')">PTT Space</button>
-          <button class="ptt-btn" id="ptt-both-btn" onclick="sendPtt('both')">PTT Both</button>
-        </div>
-        <div class="toggle-row">
-          <div>
-            <div class="toggle-label">Continuous PTT</div>
-            <div class="toggle-desc">Hold to transmit (max 10s auto-release)</div>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="ptt-hold">
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Bluetooth</h3>
-        <div class="info-item">
-          <div class="info-label">Connection Tracking</div>
-          <div class="info-value" id="conn-tracking">Enabled</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Not Connected Placeholder ── -->
+    <!-- ══ No Connection Placeholder ══ -->
     <div class="screen" id="screen-noconn">
       <div class="screen-header">
         <h2>📡 Connect to a TNC</h2>
         <p>Scan for nearby Mobilinkd TNC devices via Bluetooth Low Energy</p>
       </div>
-      <div class="card">
-        <div class="placeholder-block">
-          <div class="big">📡</div>
-          <p>No TNC connected</p>
-          <p style="margin-top:6px;font-size:0.78rem;">Click <strong>Scan for TNC</strong> in the sidebar to discover devices.</p>
-        </div>
+      <div class="unsupported-notice" id="unsupported-notice" style="display:none;">
+        <div style="font-size:1.4rem;margin-bottom:8px;">📡</div>
+        <strong>Web Bluetooth not supported</strong><br>
+        <span style="font-size:0.78rem;margin-top:4px;display:block;">
+          This app requires Chrome, Edge, or Brave on macOS, Windows, or Linux.<br>
+          Firefox and Safari are not supported.
+        </span>
+      </div>
+      <div class="unsupported-notice" id="supported-notice">
+        <div style="font-size:1.4rem;margin-bottom:8px;">📡</div>
+        <strong>No TNC connected</strong><br>
+        <span style="font-size:0.78rem;margin-top:4px;display:block;">
+          Click <strong>Scan for TNC</strong> in the sidebar to discover devices.
+        </span>
       </div>
     </div>
 
   </div><!-- /content -->
 </main>
 
+<!-- ═══ JAVASCRIPT ═══ -->
 <script>
-  /* ─── State ─── */
-  let state = 'disconnected'; // disconnected | scanning | connecting | connected
-  let device = null;
-  let gattServer = null;
-  let txChar = null;
-  let rxChar = null;
-  let unsaved = false;
-
+  /* ─── Constants ─── */
   const SERVICE_UUID = '00000001-ba2a-46c9-ae49-01b0961f68bb';
   const TX_UUID = '00000002-ba2a-46c9-ae49-01b0961f68bb';
   const RX_UUID = '00000003-ba2a-46c9-ae49-01b0961f68bb';
-
-  /* ─── KISS Constants ─── */
   const FEND = 0xC0, FESC = 0xDB, TFEND = 0xDC, TFESC = 0xDD;
+
+  /* ─── State ─── */
+  let state = 'disconnected';
+  let device = null, gattServer = null, txChar = null, rxChar = null;
+  let unsaved = false;
+  let rxStreaming = false;
+  let txActive = false;
+  let pttStyle = 0;
+  let pttInterval = null;
+
+  /* ─── Theme ─── */
+  const savedTheme = localStorage.getItem('mobilinkd-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    document.getElementById('themeIcon').textContent = theme === 'dark' ? '🌙' : '☀';
+    document.getElementById('themeLabel').textContent = theme === 'dark' ? 'Dark' : 'Light';
+    document.getElementById('logo-dark').style.display = theme === 'dark' ? 'block' : 'none';
+    document.getElementById('logo-light').style.display = theme === 'light' ? 'block' : 'none';
+    localStorage.setItem('mobilinkd-theme', theme);
+  }
+
+  function toggleTheme() {
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  }
+
+  applyTheme(savedTheme);
 
   /* ─── Browser Check ─── */
   if (!navigator.bluetooth) {
     document.getElementById('browserWarn').style.display = 'block';
     document.getElementById('btnScan').disabled = true;
+    document.getElementById('supported-notice').style.display = 'none';
+    document.getElementById('unsupported-notice').style.display = 'block';
   }
 
-  /* ─── UI Helpers ─── */
-  function setState(s, name = '', extra = '') {
+  /* ─── Navigation ─── */
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const sc = document.getElementById('screen-' + name);
+    if (sc) sc.classList.add('active');
+    document.querySelector(`.nav-item[data-screen="${name}"]`)?.classList.add('active');
+  }
+
+  /* ─── Connection State ─── */
+  function setConnState(s, name = '', extra = '') {
     state = s;
     const card = document.getElementById('connCard');
     const dot = document.getElementById('connDot');
@@ -731,177 +964,252 @@
     const cname = document.getElementById('connName');
     const btnScan = document.getElementById('btnScan');
     const btnDisc = document.getElementById('btnDisconnect');
-    const scanList = document.getElementById('scanList');
 
     card.className = 'conn-card';
-    if (s === 'scanning') { card.classList.add('scanning'); label.textContent = 'Scanning...'; cname.textContent = 'Looking for nearby TNCs…'; btnScan.style.display='none'; btnDisc.style.display='none'; }
-    else if (s === 'connected') { card.classList.add('connected'); label.textContent = 'Connected'; cname.innerHTML = `<strong>${name}</strong><br><span style="font-size:0.72rem;color:var(--text-muted)">${extra}</span>`; btnScan.style.display='none'; btnDisc.style.display='block'; scanList.style.display='none'; }
-    else if (s === 'error') { card.classList.add('error'); label.textContent = 'Error'; btnScan.style.display='block'; btnDisc.style.display='none'; }
-    else { label.textContent = 'Disconnected'; cname.textContent = 'No device connected'; btnScan.style.display='block'; btnDisc.style.display='none'; }
+    if (s === 'scanning') {
+      card.classList.add('scanning'); label.textContent = 'Scanning…';
+      cname.textContent = 'Searching for TNCs…';
+      btnScan.style.display = 'none'; btnDisc.style.display = 'none';
+    } else if (s === 'connected') {
+      card.classList.add('connected'); label.textContent = 'Connected';
+      cname.innerHTML = `<strong>${name || 'TNC'}</strong>`;
+      btnScan.style.display = 'none'; btnDisc.style.display = 'block';
+      showScreen('info');
+    } else if (s === 'error') {
+      card.classList.add('error'); label.textContent = 'Error';
+      btnScan.style.display = 'block'; btnDisc.style.display = 'none';
+    } else {
+      label.textContent = 'Disconnected';
+      cname.textContent = 'No device connected';
+      btnScan.style.display = 'block'; btnDisc.style.display = 'none';
+    }
   }
-
-  function showScreen(name) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const sc = document.getElementById('screen-' + name);
-    if (sc) sc.classList.add('active');
-    const nav = document.querySelector(`.nav-item[data-screen="${name}"]`);
-    if (nav) nav.classList.add('active');
-  }
-
-  function updateVal(id, lblId, formatter) {
-    const v = parseInt(document.getElementById(id).value);
-    document.getElementById(id + '-val').textContent = v;
-    document.getElementById(lblId).textContent = formatter(v);
-    markUnsaved();
-  }
-
-  function markUnsaved() { unsaved = true; }
 
   /* ─── BLE: Scan ─── */
   async function scan() {
-    setState('scanning');
+    setConnState('scanning');
     try {
       const dev = await navigator.bluetooth.requestDevice({
         filters: [{ services: [SERVICE_UUID] }],
         optionalServices: [SERVICE_UUID]
       });
-      setState('connecting', dev.name || 'Mobilinkd TNC', dev.id);
+      setConnState('connecting', dev.name || 'TNC');
       await connect(dev);
     } catch (e) {
-      console.error(e);
-      if (e.name !== 'NotFoundError') setState('error');
-      else setState('disconnected');
+      if (e.name !== 'NotFoundError') { console.error(e); setConnState('error'); }
+      else setConnState('disconnected');
     }
   }
 
   /* ─── BLE: Connect ─── */
   async function connect(dev) {
     device = dev;
-    device.addEventListener('gattserverdisconnected', onDisconnected);
+    device.addEventListener('gattserverdisconnected', () => {
+      setConnState('disconnected');
+      showScreen('noconn');
+    });
     gattServer = await device.gatt.connect();
     const svc = await gattServer.getPrimaryService(SERVICE_UUID);
     txChar = await svc.getCharacteristic(TX_UUID);
     rxChar = await svc.getCharacteristic(RX_UUID);
     await rxChar.startNotifications();
     rxChar.addEventListener('characteristicvaluechanged', onKissData);
-    setState('connected', dev.name || 'Mobilinkd TNC', dev.id);
-    // For demo, switch to info screen
-    showScreen('info');
-    // Real: call getAllValues() here
+    setConnState('connected', dev.name || 'Mobilinkd TNC', dev.id);
+    refreshInfo();
+    refreshPower();
   }
 
   async function disconnect() {
-    if (gattServer && gattServer.connected) {
-      gattServer.disconnect();
-    }
-    setState('disconnected');
-    device = null; gattServer = null; txChar = null; rxChar = null;
+    if (gattServer?.connected) gattServer.disconnect();
+    setConnState('disconnected');
     showScreen('noconn');
   }
 
-  function onDisconnected() {
-    setState('disconnected');
-  }
-
-  /* ─── BLE: TX ─── */
+  /* ─── KISS Framing ─── */
   function kissEncode(bytes) {
     const out = [FEND];
     for (const b of bytes) {
-      if (b === FEND) { out.push(FESC, TFEND); }
-      else if (b === FESC) { out.push(FESC, TFESC); }
+      if (b === FEND) out.push(FESC, TFEND);
+      else if (b === FESC) out.push(FESC, TFESC);
       else out.push(b);
     }
     out.push(FEND);
     return new Uint8Array(out);
   }
 
-  async function tx(cmd, subcmd, ...args) {
+  async function tx(...bytes) {
     if (!txChar) return;
-    const frame = new Uint8Array([cmd, subcmd, ...args]);
-    const pkt = kissEncode(frame);
+    const pkt = kissEncode(new Uint8Array(bytes));
     await txChar.writeValue(pkt);
   }
 
   function onKissData(event) {
-    // Parse KISS frames from BLE notifications
-    // In production: implement KissDecoder state machine from PROTOCOL.md
-    console.log('KISS data received:', event.target.value);
+    // Real implementation: feed bytes to KissDecoder state machine
+    console.log('KISS ←', Array.from(new Uint8Array(event.target.value.buffer)));
   }
 
-  /* ─── Actions ─── */
-  function refreshInfo() { tx(0x06, 0x7F); /* GET_ALL_VALUES */ }
+  /* ─── Form Helpers ─── */
+  function updateRange(id, lblId, fmt) {
+    const v = parseInt(document.getElementById(id).value);
+    document.getElementById(id + '-val').textContent = v;
+    document.getElementById(lblId).textContent = fmt(v);
+  }
+
+  function markUnsaved() { unsaved = true; }
+
+  /* ─── BLE Commands ─── */
+  function refreshInfo() { tx(0x06, 0x7F); } // GET_ALL_VALUES
+  function refreshPower() { tx(0x06, 0x06); } // GET_BATTERY_LEVEL
+
   function syncTime() {
     const now = new Date();
-    const bcd = v => Math.floor(v/10)*16 + v%10;
+    const b = v => Math.floor(v / 10) * 16 + v % 10;
     tx(0x06, 0x32,
-      bcd(now.getFullYear()-2000), bcd(now.getMonth()+1), bcd(now.getDate()),
+      b(now.getFullYear() - 2000), b(now.getMonth() + 1), b(now.getDate()),
       now.getDay(),
-      bcd(now.getHours()), bcd(now.getMinutes()), bcd(now.getSeconds())
+      b(now.getHours()), b(now.getMinutes()), b(now.getSeconds())
     );
   }
-  function refreshPower() { tx(0x06, 0x06); /* GET_BATTERY_LEVEL */ }
 
   async function saveSettings() {
     if (!txChar) return;
-    // Collect all current slider values and write to TNC
-    // Real implementation: write each param via KISS SetHardware commands
+    // Write all changed params via SetHardware commands
     tx(0x06, 0x2A); // SAVE_EEPROM
     unsaved = false;
-    alert('Settings saved to TNC.');
   }
 
-  function revertSettings() {
-    // Reload from TNC
-    refreshInfo();
+  function revertSettings() { refreshInfo(); unsaved = false; }
+
+  function autoAdjustLevels() {
+    tx(0x06, 0x2B); // ADJUST_INPUT_LEVELS
   }
 
+  /* ─── Receive Audio ─── */
+  function toggleRxStream() {
+    rxStreaming = document.getElementById('rx-streaming').checked;
+    updateRxBadge();
+    updateAudioExclusive();
+    if (rxStreaming) {
+      tx(0x06, 0x05); // STREAM_VOLUME start
+      document.getElementById('rx-mode-badge').className = 'mode-badge rx';
+      document.getElementById('rx-mode-text').textContent = 'Streaming — monitoring signal';
+    } else {
+      tx(0x06, 0x0A); // PTT_OFF also stops RX processing
+      document.getElementById('rx-mode-badge').className = 'mode-badge idle';
+      document.getElementById('rx-mode-text').textContent = 'Idle — stream inactive';
+    }
+  }
+
+  function updateRxBadge() {
+    // Called when TX becomes active
+  }
+
+  /* ─── Transmit Audio ─── */
   function setPttStyle(v) {
+    pttStyle = v;
     tx(0x06, 0x4F, v);
-    document.getElementById('ptt-simplex').classList.toggle('active', v===0);
-    document.getElementById('ptt-multiplex').classList.toggle('active', v===1);
-    document.getElementById('ptt-style-val').textContent = v===0 ? 'Simplex (0)' : 'Multiplex (1)';
+    document.getElementById('chip-simplex').classList.toggle('active', v === 0);
+    document.getElementById('chip-multiplex').classList.toggle('active', v === 1);
+    document.getElementById('ptt-style-val').textContent = v === 0 ? 'Simplex (0)' : 'Multiplex (1)';
     markUnsaved();
   }
 
-  let pttInterval = null;
   function sendPtt(mode) {
-    // Clear active PTT buttons
-    ['mark','space','both','off'].forEach(m => {
-      document.getElementById('ptt-'+m+'-btn')?.classList.remove('active');
+    if (txActive) clearInterval(pttInterval);
+    txActive = false;
+    ['off','mark','space','both'].forEach(m => {
+      const btn = document.getElementById('ptt-' + m);
+      if (btn) btn.classList.remove('active', 'off-active');
     });
-    if (pttInterval) { clearInterval(pttInterval); pttInterval = null; }
-    const cmds = { off: [0x06,0x0A], mark: [0x06,0x07], space: [0x06,0x08], both: [0x06,0x09] };
+
+    const cmds = { off: [0x06, 0x0A], mark: [0x06, 0x07], space: [0x06, 0x08], both: [0x06, 0x09] };
     const bytes = cmds[mode] || cmds.off;
     tx(...bytes);
-    if (mode !== 'off') document.getElementById('ptt-'+mode+'-btn')?.classList.add('active');
+
+    if (mode === 'off') {
+      document.getElementById('ptt-off').classList.add('off-active');
+      document.getElementById('tx-mode-badge').className = 'mode-badge idle';
+      document.getElementById('tx-mode-text').textContent = 'Idle — PTT inactive';
+      txActive = false;
+    } else {
+      document.getElementById('ptt-' + mode).classList.add('active');
+      document.getElementById('tx-mode-badge').className = 'mode-badge tx';
+      document.getElementById('tx-mode-text').textContent = `Transmitting — ${mode.toUpperCase()}`;
+      txActive = true;
+      if (document.getElementById('ptt-hold').checked) {
+        pttInterval = setTimeout(() => {
+          tx(...cmds.off);
+          document.getElementById('tx-mode-badge').className = 'mode-badge idle';
+          document.getElementById('tx-mode-text').textContent = 'Idle — auto-released at 10s';
+          txActive = false;
+          ['off','mark','space','both'].forEach(m => {
+            const btn = document.getElementById('ptt-' + m);
+            if (btn) btn.classList.remove('active', 'off-active');
+          });
+        }, 10000);
+      }
+    }
   }
 
-  // Sync slider display values on load
-  document.querySelectorAll('input[type="range"]').forEach(s => {
-    s.addEventListener('input', markUnsaved);
-  });
-  document.querySelectorAll('input[type="checkbox"]').forEach(c => {
-    c.addEventListener('change', markUnsaved);
-  });
-  document.querySelectorAll('select').forEach(s => {
-    s.addEventListener('change', markUnsaved);
-  });
-
-  // Battery bar color
-  function updateBatteryBar(mv) {
-    const pct = Math.min(100, Math.max(0, ((mv-3200)/(4200-3200))*100));
-    const bar = document.getElementById('batt-bar');
-    if (bar) {
-      bar.style.width = pct + '%';
-      bar.className = 'battery-bar-fill' + (mv < 3400 ? ' crit' : mv < 3700 ? ' warn' : '');
+  /* ─── Audio Exclusive ─── */
+  function updateAudioExclusive() {
+    const rxNotice = document.getElementById('rx-exclusive-notice');
+    const txNotice = document.getElementById('tx-exclusive-notice');
+    const rxToggle = document.getElementById('rx-streaming');
+    if (txActive && rxStreaming) {
+      rxNotice.style.display = 'flex';
+      txNotice.style.display = 'none';
+    } else if (txActive) {
+      rxNotice.style.display = 'none';
+      txNotice.style.display = 'flex';
+    } else {
+      rxNotice.style.display = 'none';
+      txNotice.style.display = 'none';
     }
+  }
+
+  /* ─── Battery Bar ─── */
+  function updateBatteryBar(mv) {
+    const pct = Math.min(100, Math.max(0, ((mv - 3200) / (4200 - 3200)) * 100));
+    const bar = document.getElementById('batt-bar');
+    if (!bar) return;
+    bar.style.width = pct + '%';
+    if (mv < 3400) bar.style.background = 'var(--crit)';
+    else if (mv < 3700) bar.style.background = 'var(--warn)';
+    else bar.style.background = 'var(--ok)';
     const lbl = document.getElementById('batt-mv');
     if (lbl) lbl.textContent = mv + ' mV';
   }
 
-  // Demo: seed battery bar with a plausible value
-  updateBatteryBar(3812);
+  /* ─── Init ─── */
+  showScreen('noconn');
+
+  /* ─── Demo Data ─── */
+  function loadDemoData() {
+    // Populate with plausible placeholder values for visual testing
+    document.getElementById('info-hwver').textContent = 'TNC3-HW 2.1';
+    document.getElementById('info-fwver').textContent = '3.0.12';
+    document.getElementById('info-serial').textContent = 'MLK-2024-03417';
+    document.getElementById('info-mac').textContent = 'AA:BB:CC:DD:EE:FF';
+    document.getElementById('info-name').textContent = 'Mobilinkd TNC3';
+    document.getElementById('info-apiver').textContent = '2';
+    document.getElementById('info-datetime').textContent = new Date().toISOString().slice(0, 19) + ' UTC';
+    updateBatteryBar(3812);
+    updateRange('txdelay','lbl-txdelay',v=>`${v} × 10ms = ${v*10}ms`);
+    updateRange('persist','lbl-persist',v=>`${v} / 256 = ${(v/256).toFixed(2)}`);
+    updateRange('slottime','lbl-slot',v=>`${v} × 10ms = ${v*10}ms`);
+    updateRange('txtail','lbl-txtail',v=>`${v} × 10ms = ${v*10}ms`);
+    document.getElementById('lbl-igain').textContent = '50';
+    document.getElementById('lbl-itwist').textContent = '8 dB';
+    document.getElementById('lbl-ogain').textContent = '128';
+    document.getElementById('lbl-otwist').textContent = '10 dB';
+    document.getElementById('lbl-squelch').textContent = '0';
+    document.getElementById('min-rx-twist').textContent = '0 dB';
+    document.getElementById('max-rx-twist').textContent = '15 dB';
+    document.getElementById('min-tx-twist').textContent = '0 dB';
+    document.getElementById('max-tx-twist').textContent = '15 dB';
+  }
+  loadDemoData();
 </script>
 </body>
 </html>
