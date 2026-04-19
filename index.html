@@ -952,6 +952,28 @@
   let device = null, gattServer = null, txChar = null, rxChar = null;
   let decoder = new KissDecoder(decodePacket);  // SLIP decoder instance
   let unsaved = false;
+
+  /* ─── BLE Write Queue ─── */
+  // GATT writes must be serialized — only one write in flight at a time.
+  let _txQueue = Promise.resolve();
+
+  async function tx(...bytes) {
+    if (!txChar || !gattServer?.connected) {
+      console.warn('[TX] No TX characteristic — not connected');
+      return;
+    }
+    const pkt = kissEncode(new Uint8Array(bytes));
+    logFrame('TX', pkt);
+    // Chain onto the queue so writes execute sequentially.
+    _txQueue = _txQueue.then(async () => {
+      try {
+        await txChar.writeValue(pkt);
+      } catch (e) {
+        console.error('[TX] writeValue failed:', e);
+      }
+    });
+    return _txQueue;
+  }
   let rxStreaming = false;
   let txActive = false;
   let pttStyle = 0;
@@ -1213,6 +1235,7 @@
     gattServer = null;
     txChar = null;
     rxChar = null;
+    _txQueue = Promise.resolve(); // reset write queue on disconnect
   }
 
   /* ─── KISS / SLIP Decoder ─── */
@@ -1330,14 +1353,19 @@
   function decodePacket(frame) {
     if (frame.length === 0) return;
     const cmd = frame[0];
+    // Log every delivered frame (green = handled, yellow = known but not implemented, red = unknown)
     if (cmd === 0x06) {
       decodeHardwareConfig(frame.slice(1));
+      logFrame('RX', frame, 'ok');  // green — handled
     } else if (cmd >= 0x01 && cmd <= 0x05) {
-      // Standard KISS param: [cmd, value]
       if (frame.length === 2) decodeKissParam(cmd, frame[1]);
-    } else {
-      // Unknown command — log as unhandled
+      logFrame('RX', frame, 'ok');
+    } else if (cmd === 0x00) {
+      // cmd=0x00 is the TNC's response to GET_ALL_VALUES — just log it
       logFrame('RX', frame, 'warn');
+    } else {
+      // Unknown command — log red so we can identify it
+      logFrame('RX', frame, 'err');
     }
   }
 
@@ -1533,8 +1561,7 @@
         break;
       }
       default:
-        // Valid subcmd but not yet handled — log yellow, don't error
-        logFrame('RX', new Uint8Array([0x06, subcmd, ...body]), 'warn');
+        // Unknown subcmd — will be logged red by decodePacket
         break;
     }
   }
@@ -1599,20 +1626,6 @@
     }
     out.push(FEND);
     return new Uint8Array(out);
-  }
-
-  async function tx(...bytes) {
-    if (!txChar || !gattServer?.connected) {
-      console.warn('[TX] No TX characteristic — not connected');
-      return;
-    }
-    const pkt = kissEncode(new Uint8Array(bytes));
-    logFrame('TX', pkt);
-    try {
-      await txChar.writeValue(pkt);
-    } catch (e) {
-      console.error('[TX] writeValue failed:', e);
-    }
   }
 
   function onKissData(event) {
