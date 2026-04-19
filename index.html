@@ -473,8 +473,7 @@
         <span class="conn-label" id="connLabel">Disconnected</span>
       </div>
       <div class="conn-name" id="connName">No device connected</div>
-      <div class="conn-extra" id="connExtra" style="font-size:0.75rem;color:var(--muted);min-height:1.2em;margin-bottom:4px"></div>
-      <button class="btn btn-primary" id="btnScan">Connect</button>
+      <button class="btn btn-primary" id="btnScan">Scan for TNC</button>
       <button class="btn btn-danger" id="btnDisconnect" style="display:none">Disconnect</button>
     </div>
 
@@ -911,7 +910,7 @@
         <div style="font-size:1.4rem;margin-bottom:8px;">📡</div>
         <strong>No TNC connected</strong><br>
         <span style="font-size:0.78rem;margin-top:4px;display:block;">
-          Click <strong>Connect</strong> in the sidebar to discover devices.
+          Click <strong>Scan for TNC</strong> in the sidebar to discover devices.
         </span>
       </div>
     </div>
@@ -1049,11 +1048,9 @@
     const cname     = document.getElementById('connName');
     const btnScan   = document.getElementById('btnScan');
     const btnDisc   = document.getElementById('btnDisconnect');
-    const connExtra = document.getElementById('connExtra');
 
     card.className = 'conn-card';
     dot?.classList.remove('scanning-dot', 'error-dot', 'ok-dot');
-    if (connExtra) connExtra.textContent = extra || '';
 
     if (s === 'scanning') {
       card.classList.add('scanning');
@@ -1070,12 +1067,9 @@
     } else if (s === 'connected') {
       card.classList.add('connected');
       label.textContent = 'Connected';
-      // Format MAC address as XX:XX:XX:XX:XX:XX
-      const macFormatted = extra
-        ? extra.replace(/(..)/g, '$1:').replace(/:$/, '').toUpperCase()
-        : '';
-      cname.innerHTML = `<strong>${name || 'TNC'}</strong>` +
-        (macFormatted ? `<br><small style="color:var(--muted);font-family:monospace">${macFormatted}</small>` : '');
+      // On Chrome desktop, device.id may be a base64 string representing the
+      // Bluetooth address — it cannot be reliably reformatted here. Show name only.
+      cname.innerHTML = `<strong>${name || 'TNC'}</strong>`;
       if (dot) { dot.classList.add('ok-dot'); dot.style.background = 'var(--ok)'; }
       btnScan.style.display = 'none'; btnDisc.style.display = 'block';
       showScreen('info');
