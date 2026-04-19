@@ -950,6 +950,7 @@
   // 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error'
   let state = 'disconnected';
   let device = null, gattServer = null, txChar = null, rxChar = null;
+  let decoder = new KissDecoder(decodePacket);  // SLIP decoder instance
   let unsaved = false;
   let rxStreaming = false;
   let txActive = false;
@@ -1214,6 +1215,380 @@
     rxChar = null;
   }
 
+  /* ─── KISS / SLIP Decoder ─── */
+  // State machine: VOID → GET_CMD → GET_DATA → ESCAPE → GET_DATA → …
+  // FEND = 0xC0 marks frame start/end. FESC = 0xDB is escape introducer.
+  // Doubled FEND at start of frame is silently ignored (TNC behavior).
+  class KissDecoder {
+    constructor(onFrame) {
+      this.onFrame = onFrame;    // callback(Uint8Array frame)
+      this.state = 'VOID';
+      this.buf = [];
+    }
+
+    /** Feed one or more raw bytes from a BLE notification. */
+    push(bytes) {
+      for (const b of bytes) {
+        if (b === FEND) this._fend();
+        else if (b === FESC) this._fesc();
+        else this._data(b);
+      }
+    }
+
+    _fend() {
+      if (this.state === 'VOID') {
+        // Leading doubled FEND — TNC sends this; ignore silently.
+        return;
+      }
+      // Frame complete — deliver it.
+      const frame = new Uint8Array(this.buf);
+      this.buf = [];
+      this.state = 'GET_CMD';
+      if (frame.length > 0) this.onFrame(frame);
+    }
+
+    _fesc() {
+      // FESC in GET_DATA → next byte is escaped literal (TFEND or TFESC).
+      // Any other state with FESC is malformed — reset.
+      if (this.state === 'GET_DATA') {
+        this.state = 'ESCAPE';
+      } else {
+        // Unexpected FESC — reset and wait for next FEND.
+        this.buf = [];
+        this.state = 'VOID';
+      }
+    }
+
+    _data(b) {
+      if (this.state === 'VOID') {
+        // Byte before FEND — treat as command start.
+        this.buf.push(b);
+        this.state = 'GET_DATA';
+      } else if (this.state === 'GET_CMD') {
+        this.buf.push(b);
+        this.state = 'GET_DATA';
+      } else if (this.state === 'GET_DATA') {
+        this.buf.push(b);
+      } else if (this.state === 'ESCAPE') {
+        // Unescape: TFEND(0xDC)→FEND(0xC0), TFESC(0xDD)→FESC(0xDB)
+        this.buf.push(b === TFEND ? FEND : b === TFESC ? FESC : b);
+        this.state = 'GET_DATA';
+      }
+      // Buffer overflow guard — start dropping at 512 bytes.
+      if (this.buf.length > 512) {
+        this.buf = [];
+        this.state = 'VOID';
+      }
+    }
+
+    reset() {
+      this.buf = [];
+      this.state = 'VOID';
+    }
+  }
+
+  /* ─── TNC State ─── */
+  // Collected from GET_ALL_VALUES and other responses.
+  const tncState = {
+    firmwareVersion: null,
+    hardwareVersion: null,
+    serialNumber: null,
+    macAddress: null,
+    apiVersion: null,
+    datetime: null,
+    txDelay: null,
+    persistence: null,
+    slotTime: null,
+    txTail: null,
+    duplex: null,
+    batteryMv: null,
+    txGain: null,
+    rxGain: null,
+    inputTwist: null,
+    outputTwist: null,
+    verbosity: null,
+    pttStyle: null,
+    passall: null,
+    rxPolarity: null,
+    txPolarity: null,
+    minTxTwist: null, maxTxTwist: null,
+    minRxTwist: null, maxRxTwist: null,
+    minRxGain: null, maxRxGain: null,
+    capabilities: null,
+    modemType: null,
+  };
+
+  /* ─── Helpers ─── */
+  function bcdToInt(b) { return ((b >> 4) & 0x0F) * 10 + (b & 0x0F); }
+
+  function formatMac(bytes) {
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(':');
+  }
+
+  /* ─── Response Parser ─── */
+  // Main entry point — called with each complete KISS frame.
+  function decodePacket(frame) {
+    if (frame.length === 0) return;
+    const cmd = frame[0];
+    if (cmd === 0x06) {
+      decodeHardwareConfig(frame.slice(1));
+    } else if (cmd >= 0x01 && cmd <= 0x05) {
+      // Standard KISS param: [cmd, value]
+      if (frame.length === 2) decodeKissParam(cmd, frame[1]);
+    } else {
+      // Unknown command — log as unhandled
+      logFrame('RX', frame, 'warn');
+    }
+  }
+
+  function decodeKissParam(cmd, val) {
+    switch (cmd) {
+      case 0x01: tncState.txDelay    = val; break;
+      case 0x02: tncState.persistence = val; break;
+      case 0x03: tncState.slotTime   = val; break;
+      case 0x04: tncState.txTail     = val; break;
+      case 0x05: tncState.duplex     = val; break;
+    }
+    updateInfoUI();
+  }
+
+  function decodeHardwareConfig(data) {
+    if (data.length < 1) return;
+    const subcmd = data[0];
+    const body   = data.slice(1);
+
+    switch (subcmd) {
+      case 0x04: { // Input Level — uint16be
+        // Not exposed in UI; just store
+        break;
+      }
+      case 0x06: { // Battery Level — uint16be mV
+        if (body.length >= 2) {
+          const mv = (body[0] << 8) | body[1];
+          tncState.batteryMv = mv;
+          updateBatteryBar(mv);
+        }
+        break;
+      }
+      case 0x0C: { // TX Gain — uint16be
+        if (body.length >= 2) {
+          tncState.txGain = (body[0] << 8) | body[1];
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x0D: { // RX Gain / Input Gain — uint16be
+        if (body.length >= 2) {
+          tncState.rxGain = (body[0] << 8) | body[1];
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x11: { // Verbosity — uint8
+        if (body.length >= 1) tncState.verbosity = body[0];
+        break;
+      }
+      case 0x19: { // RX Twist — int8
+        if (body.length >= 1) {
+          tncState.inputTwist = (body[0] << 24) >> 24; // sign-extend
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x1B: { // TX Twist — int8
+        if (body.length >= 1) {
+          tncState.outputTwist = (body[0] << 24) >> 24;
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x21: { // TX Delay — uint8 (KISS)
+        tncState.txDelay = body[0];
+        updateInfoUI();
+        break;
+      }
+      case 0x22: { // Persistence — uint8
+        tncState.persistence = body[0];
+        updateInfoUI();
+        break;
+      }
+      case 0x23: { // Slot Time — uint8
+        tncState.slotTime = body[0];
+        updateInfoUI();
+        break;
+      }
+      case 0x24: { // TX Tail — uint8 (KISS)
+        tncState.txTail = body[0];
+        updateInfoUI();
+        break;
+      }
+      case 0x25: { // Duplex — uint8
+        if (body.length >= 1) tncState.duplex = body[0];
+        break;
+      }
+      case 0x28: { // Firmware Version — UTF-8 string
+        tncState.firmwareVersion = new TextDecoder().decode(body);
+        updateInfoUI();
+        break;
+      }
+      case 0x29: { // Hardware Version — UTF-8 string
+        tncState.hardwareVersion = new TextDecoder().decode(body);
+        updateInfoUI();
+        break;
+      }
+      case 0x2F: { // Serial Number — UTF-8 string
+        tncState.serialNumber = new TextDecoder().decode(body);
+        updateInfoUI();
+        break;
+      }
+      case 0x30: { // MAC Address — 6 raw bytes
+        if (body.length >= 6) {
+          tncState.macAddress = formatMac(body.slice(0, 6));
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x31: { // DateTime — BCD YYMMDDWWHHMMSS (8 bytes)
+        if (body.length >= 7) {
+          try {
+            const yy = bcdToInt(body[0]) + 2000;
+            const mm = bcdToInt(body[1]);
+            const dd = bcdToInt(body[2]);
+            const dw = body[3];        // 0=Sunday
+            const hh = bcdToInt(body[4]);
+            const min = bcdToInt(body[5]);
+            const ss = bcdToInt(body[6]);
+            const dows = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            tncState.datetime = `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}T${String(hh).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(ss).padStart(2,'0')} ${dows[dw]}`;
+            updateInfoUI();
+          } catch (_) {}
+        }
+        break;
+      }
+      case 0x50: { // PTT Style — uint8
+        if (body.length >= 1) {
+          tncState.pttStyle = body[0];
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x52: { // Pass-All — uint8
+        if (body.length >= 1) tncState.passall = body[0];
+        break;
+      }
+      case 0x54: { // RX Polarity — uint8
+        if (body.length >= 1) tncState.rxPolarity = body[0];
+        break;
+      }
+      case 0x56: { // TX Polarity — uint8
+        if (body.length >= 1) tncState.txPolarity = body[0];
+        break;
+      }
+      case 0x77: { // Min TX Twist — uint8
+        if (body.length >= 1) { tncState.minTxTwist = body[0]; updateInfoUI(); }
+        break;
+      }
+      case 0x78: { // Max TX Twist — uint8
+        if (body.length >= 1) { tncState.maxTxTwist = body[0]; updateInfoUI(); }
+        break;
+      }
+      case 0x79: { // Min RX Twist — uint8
+        if (body.length >= 1) { tncState.minRxTwist = body[0]; updateInfoUI(); }
+        break;
+      }
+      case 0x7A: { // Max RX Twist — uint8
+        if (body.length >= 1) { tncState.maxRxTwist = body[0]; updateInfoUI(); }
+        break;
+      }
+      case 0x7B: { // API Version — int8
+        if (body.length >= 1) {
+          tncState.apiVersion = (body[0] << 24) >> 24;
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x7C: { // Min RX Gain — uint16be
+        if (body.length >= 2) {
+          tncState.minRxGain = (body[0] << 8) | body[1];
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x7D: { // Max RX Gain — uint16be
+        if (body.length >= 2) {
+          tncState.maxRxGain = (body[0] << 8) | body[1];
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0x7E: { // Capabilities — uint8 bitmap
+        if (body.length >= 1) {
+          tncState.capabilities = body[0];
+          updateInfoUI();
+        }
+        break;
+      }
+      case 0xC1: { // Extended — subcmd at body[1]
+        if (body.length >= 2) decodeExtendedConfig(body.slice(1));
+        break;
+      }
+      default:
+        // Valid subcmd but not yet handled — log yellow, don't error
+        logFrame('RX', new Uint8Array([0x06, subcmd, ...body]), 'warn');
+        break;
+    }
+  }
+
+  function decodeExtendedConfig(data) {
+    if (data.length < 1) return;
+    const extSubcmd = data[0];
+    const body = data.slice(1);
+    if (extSubcmd === 0x81 && body.length >= 1) {
+      // Modem Type — uint8
+      tncState.modemType = body[0];
+      updateInfoUI();
+    }
+    // 0x83 = supported modem types — byte array
+  }
+
+  /* ─── UI Update ─── */
+  function updateInfoUI() {
+    const s = tncState;
+    const d = v => v ?? '—';
+
+    setInfo('info-hwver', s.hardwareVersion ?? null);
+    setInfo('info-fwver', s.firmwareVersion ?? null);
+    setInfo('info-serial', s.serialNumber ?? null);
+    setInfo('info-mac',   s.macAddress ?? null);
+    setInfo('info-apiver', s.apiVersion !== null ? String(s.apiVersion) : null);
+    setInfo('info-datetime', s.datetime ?? null);
+
+    // Also update KISS param fields if screen is active
+    if (s.txDelay !== null) {
+      const el = document.getElementById('txdelay');
+      if (el) { el.value = s.txDelay; updateRange('txdelay','lbl-txdelay',v=>`${v} × 10ms = ${v*10}ms`); }
+    }
+    if (s.persistence !== null) {
+      const el = document.getElementById('persist');
+      if (el) { el.value = s.persistence; updateRange('persist','lbl-persist',v=>`${v} / 256 = ${(v/256).toFixed(2)}`); }
+    }
+    if (s.slotTime !== null) {
+      const el = document.getElementById('slottime');
+      if (el) { el.value = s.slotTime; updateRange('slottime','lbl-slot',v=>`${v} × 10ms = ${v*10}ms`); }
+    }
+
+    // TX/RX twist ranges
+    if (s.minRxTwist !== null) { const el = document.getElementById('min-rx-twist'); if (el) el.textContent = d(s.minRxTwist) + ' dB'; }
+    if (s.maxRxTwist !== null) { const el = document.getElementById('max-rx-twist'); if (el) el.textContent = d(s.maxRxTwist) + ' dB'; }
+    if (s.minTxTwist !== null) { const el = document.getElementById('min-tx-twist'); if (el) el.textContent = d(s.minTxTwist) + ' dB'; }
+    if (s.maxTxTwist !== null) { const el = document.getElementById('max-tx-twist'); if (el) el.textContent = d(s.maxTxTwist) + ' dB'; }
+  }
+
+  function setInfo(id, value) {
+    const el = document.getElementById(id);
+    if (el && value !== null) el.textContent = value;
+  }
+
   /* ─── KISS Framing ─── */
   function kissEncode(bytes) {
     const out = [FEND];
@@ -1242,8 +1617,7 @@
 
   function onKissData(event) {
     const data = new Uint8Array(event.target.value.buffer);
-    logFrame('RX', data, 'ok');
-    // TODO: feed data to KissDecoder state machine (Phase 2)
+    decoder.push(data);  // feed to SLIP decoder → decodePacket()
   }
 
   /* ─── Form Helpers ─── */
@@ -1256,7 +1630,23 @@
   function markUnsaved() { unsaved = true; }
 
   /* ─── BLE Commands ─── */
-  function refreshInfo() { tx(0x06, 0x7F); } // GET_ALL_VALUES
+  let infoLoadTimer = null;
+
+  function refreshInfo() {
+    // Reset state and show loading indicators
+    Object.keys(tncState).forEach(k => { tncState[k] = null; });
+    // Show placeholder while waiting
+    ['info-hwver','info-fwver','info-serial','info-mac','info-apiver','info-datetime'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '…';
+    });
+    // GET_ALL_VALUES returns multiple frames — timeout after 3s
+    clearTimeout(infoLoadTimer);
+    infoLoadTimer = setTimeout(() => {
+      updateInfoUI(); // populate whatever arrived
+    }, 3000);
+    tx(0x06, 0x7F); // GET_ALL_VALUES
+  }
   function refreshPower() { tx(0x06, 0x06); } // GET_BATTERY_LEVEL
 
   function syncTime() {
