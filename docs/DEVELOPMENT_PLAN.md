@@ -19,13 +19,13 @@
 ## Phase 2: SLIP (KISS Framing)
 **Goal:** Reliable byte framing for BLE GATT.
 
-- [ ] `KissEncoder.encode(bytes)` — SLIP encode with FEND/FESC/TFEND/TFESC (already done)
-- [ ] `KissDecoder` state machine — VOID → GET_CMD → GET_DATA → ESCAPE states
-- [ ] Buffer overflow handling (≥256 bytes → reset + discard)
-- [ ] Deliver complete frames to `onKissData()` as `Uint8Array`
-- [ ] `onKissData()` stub → frame router
+- [x] `KissEncoder.encode(bytes)` — SLIP encode with FEND/FESC/TFEND/TFESC (already done)
+- [x] `KissDecoder` state machine — VOID → GET_CMD → GET_DATA → ESCAPE states
+- [x] Buffer overflow handling (≥512 bytes → reset + discard)
+- [x] Deliver complete frames to `onKissData()` as `Uint8Array`
+- [x] `onKissData()` → frame router (`decodePacket`)
 
-**Status:** Not started
+**Status:** Complete
 
 ---
 
@@ -33,21 +33,23 @@
 **Goal:** Bidirectional command/response protocol.
 
 **Encoder:**
-- [ ] `sendHardware(subcmd, ...args)` — wraps args in KISS frame with cmd 0x06
-- [ ] `sendKiss(cmd, arg)` — standard KISS commands (0x01–0x05)
-- [ ] `sendGetAllValues()` → `tx(0x06, 0x7F)`
+- [x] `tx()` — already sends raw KISS frames (cmd 0x06 subcmd encoding done inline)
+- [x] `sendGetAllValues()` → `tx(0x06, 0x7F)`
 - [ ] `sendSaveEeprom()` → `tx(0x06, 0x2A)`
-- [ ] `sendSetXxx()` methods for each param (TXDELAY, PERSISTENCE, SLOTIME, GAIN, TWIST, etc.)
+- [ ] `sendSetTxDelay(v)`, `sendSetPersistence(v)`, `sendSetSlotTime(v)`, `sendSetDuplex(v)`
+- [ ] `sendSetOutputGain(v)` (16-bit), `sendSetInputGain(v)` (16-bit)
+- [ ] `sendSetInputTwist(v)`, `sendSetOutputTwist(v)` (int8)
+- [ ] `sendSetPttChannel(v)`, `sendStreamStart()`, `sendStreamStop()`
 
 **Decoder:**
-- [ ] `decodePacket(frame)` — route by cmd byte (0x01–0x06)
-- [ ] `decodeHardwareConfig(frame)` — route by subcmd byte (0x04, 0x06, 0x0C, 0x7F, etc.)
-- [ ] String fields (firmware, hardware, serial, MAC) parsing
-- [ ] BCD datetime decoding
-- [ ] Extended subcmd 0xC1 routing
-- [ ] Store decoded values in a `tncState` object
+- [x] `decodePacket(frame)` — route by cmd byte (0x01–0x05 KISS, 0x06 hardware)
+- [x] `decodeHardwareConfig(data)` — route by subcmd byte (all subcmds 0x04–0x7E)
+- [x] String fields (firmware, hardware, serial, MAC) parsing
+- [x] BCD datetime decoding
+- [x] Extended subcmd 0xC1 routing
+- [x] Store decoded values in `tncState` object; update UI immediately on each response
 
-**Status:** Not started
+**Status:** Decoder complete; encoder partial (GET_ALL_VALUES done, individual setters not yet wired to UI)
 
 ---
 
