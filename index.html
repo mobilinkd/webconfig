@@ -379,6 +379,51 @@
       font-size: 0.82rem;
     }
 
+    /* ── Protocol Log ── */
+    .protocol-log {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      overflow: hidden;
+    }
+    .protocol-log-header {
+      display: grid;
+      grid-template-columns: 90px 30px 1fr;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--surface3);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .protocol-log-body {
+      height: 300px;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    .protocol-log-body .log-TX { color: var(--tx-active); }
+    .protocol-log-body .log-RX { color: var(--rx-active); }
+    .protocol-log-body .log-sys { color: var(--muted); font-style: italic; }
+    .log-ts { color: var(--text-muted); margin-right: 6px; }
+    .log-dir { font-weight: bold; margin-right: 6px; width: 24px; }
+    .log-hex { word-break: break-all; }
+
+    /* ── Conn card extras ── */
+    .conn-extra { color: var(--warn); min-height: 1.2em; }
+
+    /* ── Scanning dot animation ── */
+    @keyframes scanPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .scanning-dot { animation: scanPulse 1.2s ease-in-out infinite; }
+    .error-dot { animation: none; }
+    .ok-dot { animation: none; }
+
     /* Responsive */
     @media (max-width: 680px) {
       main { flex-direction: column; }
@@ -428,8 +473,9 @@
         <span class="conn-label" id="connLabel">Disconnected</span>
       </div>
       <div class="conn-name" id="connName">No device connected</div>
-      <button class="btn btn-primary" id="btnScan" onclick="scan()">Scan for TNC</button>
-      <button class="btn btn-danger" id="btnDisconnect" onclick="disconnect()" style="display:none">Disconnect</button>
+      <div class="conn-extra" id="connExtra" style="font-size:0.75rem;color:var(--warn);min-height:1.2em;margin-bottom:4px"></div>
+      <button class="btn btn-primary" id="btnScan">Scan for TNC</button>
+      <button class="btn btn-danger" id="btnDisconnect" style="display:none">Disconnect</button>
     </div>
 
     <div style="flex:1"></div>
@@ -453,6 +499,9 @@
       </li>
       <li class="nav-item" data-screen="power" onclick="showScreen('power')">
         <span class="nav-icon">🔋</span> Power Settings
+      </li>
+      <li class="nav-item" data-screen="log" onclick="showScreen('log')">
+        <span class="nav-icon">📋</span> Protocol Log
       </li>
     </ul>
   </aside>
@@ -867,6 +916,26 @@
       </div>
     </div>
 
+    <!-- ══ Protocol Log (Dev) ══ -->
+    <div class="screen" id="screen-log">
+      <div class="screen-header">
+        <h2>📋 Protocol Log</h2>
+        <p>Raw KISS frames sent and received — for development debugging</p>
+      </div>
+      <div class="action-bar" style="margin-bottom:8px">
+        <button class="btn btn-secondary btn-icon" id="btnClearLog">🗑 Clear</button>
+        <button class="btn btn-secondary btn-icon" id="btnDemoData">📦 Load Demo Data</button>
+      </div>
+      <div class="protocol-log" id="protocol-log">
+        <div class="protocol-log-header">
+          <span>Time</span><span>Dir</span><span>Data (hex)</span>
+        </div>
+        <div class="protocol-log-body" id="protocol-log-body">
+          <div class="log-sys" style="color:var(--muted);padding:4px 0">No frames yet. Connect to a TNC to see traffic.</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </main>
 
@@ -874,11 +943,12 @@
 <script>
   /* ─── Constants ─── */
   const SERVICE_UUID = '00000001-ba2a-46c9-ae49-01b0961f68bb';
-  const TX_UUID = '00000002-ba2a-46c9-ae49-01b0961f68bb';
-  const RX_UUID = '00000003-ba2a-46c9-ae49-01b0961f68bb';
+  const TX_UUID     = '00000002-ba2a-46c9-ae49-01b0961f68bb';
+  const RX_UUID     = '00000003-ba2a-46c9-ae49-01b0961f68bb';
   const FEND = 0xC0, FESC = 0xDB, TFEND = 0xDC, TFESC = 0xDD;
 
-  /* ─── State ─── */
+  /* ─── Connection State ─── */
+  // 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error'
   let state = 'disconnected';
   let device = null, gattServer = null, txChar = null, rxChar = null;
   let unsaved = false;
@@ -886,6 +956,47 @@
   let txActive = false;
   let pttStyle = 0;
   let pttInterval = null;
+  let lastError = '';
+  let reconnectAttempts = 0;
+  const MAX_RECONNECT = 2;
+
+  /* ─── Protocol Log (Phase 10) ─── */
+  let protocolLog = [];
+  const MAX_LOG = 100;
+
+  function logFrame(dir, data, color = 'log') {
+    const ts = new Date().toISOString().slice(11, 23);
+    const hex = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    const entry = { ts, dir, hex, color };
+    protocolLog.push(entry);
+    if (protocolLog.length > MAX_LOG) protocolLog.shift();
+    renderProtocolLog();
+  }
+
+  function renderProtocolLog() {
+    const el = document.getElementById('protocol-log-body');
+    if (!el) return;
+    if (protocolLog.length === 0) {
+      el.innerHTML = '<div class="log-sys" style="color:var(--muted);padding:4px 0">No frames yet. Connect to a TNC to see traffic.</div>';
+      return;
+    }
+    el.innerHTML = protocolLog.map(e =>
+      `<div class="log-${e.dir}" style="color:var(--${e.color === 'log' ? 'text' : e.color})">
+        <span class="log-ts">${e.ts}</span>
+        <span class="log-dir">${e.dir}</span>
+        <span class="log-hex">${e.hex}</span>
+      </div>`
+    ).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function clearProtocolLog() {
+    protocolLog = [];
+    renderProtocolLog();
+    // Restore placeholder after clearing.
+    const el = document.getElementById('protocol-log-body');
+    if (el) el.innerHTML = '<div class="log-sys" style="color:var(--muted);padding:4px 0">Log cleared.</div>';
+  }
 
   /* ─── Theme ─── */
   const savedTheme = localStorage.getItem('mobilinkd-theme') ||
@@ -912,6 +1023,11 @@
     document.getElementById('btnScan').disabled = true;
     document.getElementById('supported-notice').style.display = 'none';
     document.getElementById('unsupported-notice').style.display = 'block';
+    // Prevent scan() from running — guard at the top.
+    const _origScan = scan;
+    window.scan = function() {
+      alert('Web Bluetooth is not supported in this browser.');
+    };
   }
 
   /* ─── Navigation ─── */
@@ -924,73 +1040,179 @@
   }
 
   /* ─── Connection State ─── */
+  /* ─── Connection State UI ─── */
   function setConnState(s, name = '', extra = '') {
     state = s;
-    const card = document.getElementById('connCard');
-    const dot = document.getElementById('connDot');
-    const label = document.getElementById('connLabel');
-    const cname = document.getElementById('connName');
-    const btnScan = document.getElementById('btnScan');
-    const btnDisc = document.getElementById('btnDisconnect');
+    const card      = document.getElementById('connCard');
+    const dot       = document.getElementById('connDot');
+    const label     = document.getElementById('connLabel');
+    const cname     = document.getElementById('connName');
+    const btnScan   = document.getElementById('btnScan');
+    const btnDisc   = document.getElementById('btnDisconnect');
+    const connExtra = document.getElementById('connExtra');
 
     card.className = 'conn-card';
+    dot?.classList.remove('scanning-dot', 'error-dot', 'ok-dot');
+    if (connExtra) connExtra.textContent = extra || '';
+
     if (s === 'scanning') {
-      card.classList.add('scanning'); label.textContent = 'Scanning…';
+      card.classList.add('scanning');
+      label.textContent = 'Scanning…';
       cname.textContent = 'Searching for TNCs…';
+      if (dot) { dot.classList.add('scanning-dot'); dot.style.background = 'var(--warn)'; }
+      btnScan.style.display = 'none'; btnDisc.style.display = 'none';
+    } else if (s === 'connecting') {
+      card.classList.add('connecting');
+      label.textContent = 'Connecting…';
+      cname.textContent = name || 'TNC';
+      if (dot) { dot.classList.add('scanning-dot'); dot.style.background = 'var(--warn)'; }
       btnScan.style.display = 'none'; btnDisc.style.display = 'none';
     } else if (s === 'connected') {
-      card.classList.add('connected'); label.textContent = 'Connected';
-      cname.innerHTML = `<strong>${name || 'TNC'}</strong>`;
+      card.classList.add('connected');
+      label.textContent = 'Connected';
+      cname.innerHTML = `<strong>${name || 'TNC'}</strong>` + (extra ? `<br><small style="color:var(--muted)">${extra}</small>` : '');
+      if (dot) { dot.classList.add('ok-dot'); dot.style.background = 'var(--ok)'; }
       btnScan.style.display = 'none'; btnDisc.style.display = 'block';
       showScreen('info');
     } else if (s === 'error') {
-      card.classList.add('error'); label.textContent = 'Error';
+      card.classList.add('error');
+      label.textContent = 'Error';
+      cname.textContent = name || 'Connection failed';
+      if (dot) { dot.classList.add('error-dot'); dot.style.background = 'var(--crit)'; }
       btnScan.style.display = 'block'; btnDisc.style.display = 'none';
     } else {
       label.textContent = 'Disconnected';
       cname.textContent = 'No device connected';
+      if (dot) dot.style.background = 'var(--muted)';
       btnScan.style.display = 'block'; btnDisc.style.display = 'none';
     }
   }
 
   /* ─── BLE: Scan ─── */
   async function scan() {
+    if (state === 'scanning' || state === 'connecting') return;
     setConnState('scanning');
+    lastError = '';
     try {
+      // requestDevice shows a browser picker. The filter ensures we only
+      // see devices advertising the Mobilinkd TNC service.
       const dev = await navigator.bluetooth.requestDevice({
         filters: [{ services: [SERVICE_UUID] }],
         optionalServices: [SERVICE_UUID]
       });
+      // User selected a device — connect to it.
       setConnState('connecting', dev.name || 'TNC');
       await connect(dev);
     } catch (e) {
-      if (e.name !== 'NotFoundError') { console.error(e); setConnState('error'); }
-      else setConnState('disconnected');
+      lastError = e.message || e.name;
+      if (e.name === 'NotFoundError') {
+        // User cancelled the picker — not an error.
+        setConnState('disconnected');
+      } else if (e.name === 'NotAllowedError') {
+        setConnState('error', 'Bluetooth is disabled. Enable it in OS settings.');
+      } else if (e.name === 'SecurityError') {
+        setConnState('error', 'Bluetooth pairing failed. Try again.');
+      } else {
+        console.error('[BLE scan]', e);
+        setConnState('error', lastError);
+      }
     }
   }
 
   /* ─── BLE: Connect ─── */
   async function connect(dev) {
     device = dev;
-    device.addEventListener('gattserverdisconnected', () => {
-      setConnState('disconnected');
-      showScreen('noconn');
-    });
-    gattServer = await device.gatt.connect();
-    const svc = await gattServer.getPrimaryService(SERVICE_UUID);
-    txChar = await svc.getCharacteristic(TX_UUID);
-    rxChar = await svc.getCharacteristic(RX_UUID);
-    await rxChar.startNotifications();
-    rxChar.addEventListener('characteristicvaluechanged', onKissData);
+    lastError = '';
+
+    // Clean up any previous connection.
+    await cleanupConnection();
+
+    // Register the disconnect handler BEFORE connecting, so we catch all disconnects.
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+
+    try {
+      gattServer = await device.gatt.connect();
+    } catch (e) {
+      device.removeEventListener('gattserverdisconnected', onDisconnected);
+      throw e;
+    }
+
+    try {
+      const svc = await gattServer.getPrimaryService(SERVICE_UUID);
+      txChar = await svc.getCharacteristic(TX_UUID);
+      rxChar = await svc.getCharacteristic(RX_UUID);
+      // Enable RX notifications — TNC will send responses as notifications.
+      await rxChar.startNotifications();
+      rxChar.addEventListener('characteristicvaluechanged', onKissData);
+    } catch (e) {
+      // Partial connect — clean up.
+      await cleanupConnection();
+      throw e;
+    }
+
+    reconnectAttempts = 0;
     setConnState('connected', dev.name || 'Mobilinkd TNC', dev.id);
+    logFrame('sys', new Uint8Array([0x00]), 'ok');  // marker: connected
     refreshInfo();
     refreshPower();
   }
 
+  /* ─── BLE: Disconnect ─── */
   async function disconnect() {
-    if (gattServer?.connected) gattServer.disconnect();
+    await cleanupConnection();
+    device?.removeEventListener('gattserverdisconnected', onDisconnected);
     setConnState('disconnected');
     showScreen('noconn');
+    logFrame('sys', new Uint8Array([0x01]), 'warn');  // marker: disconnected
+  }
+
+  /* ─── BLE: Unexpected Disconnect Handler ─── */
+  function onDisconnected(event) {
+    // event.reason is a BluetoothRemoteGATTServerError.code (numeric).
+    // Common values: 0x2A = connection timeout, 0x08 = link lost, 0x13 = user ended
+    const reasonCode = event.status?.code ?? 0;
+    let reason = 'Device disconnected';
+    if (reasonCode === 0x08) reason = 'Connection lost (link terminated)';
+    else if (reasonCode === 0x2A) reason = 'Connection timed out';
+    else if (reasonCode === 0x13) reason = 'Device disconnected by user';
+
+    lastError = reason;
+    logFrame('sys', new Uint8Array([reasonCode]), 'err');
+
+    // Attempt up to MAX_RECONNECT auto-reconnects for link-loss only.
+    if (reasonCode === 0x08 && reconnectAttempts < MAX_RECONNECT) {
+      reconnectAttempts++;
+      setConnState('error', `Reconnecting… (${reconnectAttempts}/${MAX_RECONNECT})`);
+      setTimeout(() => {
+        if (state === 'error' && device) {
+          connect(device).catch(() => {
+            // Reconnect failed — fall through to disconnected state.
+            setConnState('disconnected');
+            showScreen('noconn');
+          });
+        }
+      }, 500);
+    } else {
+      reconnectAttempts = 0;
+      setConnState('error', reason);
+      showScreen('noconn');
+    }
+  }
+
+  /* ─── BLE: Cleanup helper ─── */
+  async function cleanupConnection() {
+    try {
+      if (rxChar) {
+        rxChar.removeEventListener('characteristicvaluechanged', onKissData);
+        await rxChar.stopNotifications().catch(() => {});
+      }
+    } catch (_) {}
+    try {
+      if (gattServer?.connected) gattServer.disconnect();
+    } catch (_) {}
+    gattServer = null;
+    txChar = null;
+    rxChar = null;
   }
 
   /* ─── KISS Framing ─── */
@@ -1006,14 +1228,23 @@
   }
 
   async function tx(...bytes) {
-    if (!txChar) return;
+    if (!txChar || !gattServer?.connected) {
+      console.warn('[TX] No TX characteristic — not connected');
+      return;
+    }
     const pkt = kissEncode(new Uint8Array(bytes));
-    await txChar.writeValue(pkt);
+    logFrame('TX', pkt);
+    try {
+      await txChar.writeValue(pkt);
+    } catch (e) {
+      console.error('[TX] writeValue failed:', e);
+    }
   }
 
   function onKissData(event) {
-    // Real implementation: feed bytes to KissDecoder state machine
-    console.log('KISS ←', Array.from(new Uint8Array(event.target.value.buffer)));
+    const data = new Uint8Array(event.target.value.buffer);
+    logFrame('RX', data, 'ok');
+    // TODO: feed data to KissDecoder state machine (Phase 2)
   }
 
   /* ─── Form Helpers ─── */
@@ -1145,12 +1376,8 @@
     if (lbl) lbl.textContent = mv + ' mV';
   }
 
-  /* ─── Init ─── */
-  showScreen('noconn');
-
-  /* ─── Demo Data ─── */
+  /* ─── Demo Data (dev helper) ─── */
   function loadDemoData() {
-    // Populate with plausible placeholder values for visual testing
     document.getElementById('info-hwver').textContent = 'TNC3-HW 2.1';
     document.getElementById('info-fwver').textContent = '3.0.12';
     document.getElementById('info-serial').textContent = 'MLK-2024-03417';
@@ -1171,7 +1398,15 @@
     document.getElementById('min-tx-twist').textContent = '0 dB';
     document.getElementById('max-tx-twist').textContent = '15 dB';
   }
-  loadDemoData();
+
+  /* ─── Init ─── */
+  showScreen('noconn');
+  document.getElementById('btnScan').addEventListener('click', scan);
+  document.getElementById('btnDisconnect').addEventListener('click', disconnect);
+  document.getElementById('btnClearLog').addEventListener('click', clearProtocolLog);
+  document.getElementById('btnDemoData').addEventListener('click', loadDemoData);
+
+
 </script>
 </body>
 </html>
